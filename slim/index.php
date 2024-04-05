@@ -20,6 +20,12 @@ $app->add( function ($request, $handler) {
     ;
 });
 
-// ACÁ VAN LOS ENDPOINTS
+function createConnection() {
+    $dsn = 'mysql:host=db;dbname=seminariophp';
+    $username = 'seminariophp';
+    $password = 'seminariophp';
+
+    return new PDO($dsn, $username, $password);
+};
 
 $app->run();
