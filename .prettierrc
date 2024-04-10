@@ -9,5 +9,7 @@
     "trailingComma": "none",
     "bracketSpacing": true,
     "jsxBracketSameLine": false,
-    "semi": true
+    "semi": true,
+    "plugins": ["@prettier/plugin-php"],
+    "braceStyle": "1tbs"
 }
