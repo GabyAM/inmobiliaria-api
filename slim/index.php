@@ -56,5 +56,64 @@ $app->get('/localidades', function (Request $request, Response $response) {
     }
 });
 
+$app->post('/localidades', function (Request $request, Response $response) {
+    $data = $request->getParsedBody();
+    if (isset($data['nombre'])) {
+        $nombre = $data['nombre'];
+
+        if (gettype($nombre) != 'string') {
+            $response->getBody()->write(
+                json_encode([
+                    'status' => 'failure',
+                    'error' => 'El nombre debe ser un string',
+                ])
+            );
+            return $response->withStatus(400);
+        }
+        if (strlen($nombre) > 50) {
+            $response->getBody()->write(
+                json_encode([
+                    'status' => 'failure',
+                    'error' =>
+                        'El nombre tiene que tener menos de 50 carácteres',
+                ])
+            );
+            return $response->withStatus(400);
+        }
+
+        $pdo = createConnection();
+
+        try {
+            $sql = 'INSERT INTO localdades (nombre) VALUES (:nombre)';
+            $query = $pdo->prepare($sql);
+            $query->bindValue(':nombre', $nombre);
+            $query->execute();
+
+            $response->getBody()->write(
+                json_encode([
+                    'status' => 'success',
+                    'message' => 'Localidad creada',
+                ])
+            );
+            return $response;
+        } catch (\Exception $e) {
+            $response->getBody()->write(
+                json_encode([
+                    'status' => 'failure',
+                    'error' => $e->getMessage(),
+                ])
+            );
+            return $response->withStatus(500);
+        }
+    } else {
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'failure',
+                'error' => 'No se ingreso un nombre',
+            ])
+        );
+        return $response->withStatus(400);
+    }
+});
 
 $app->run();
