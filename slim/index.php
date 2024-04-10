@@ -7,17 +7,23 @@ use Slim\Factory\AppFactory;
 require __DIR__ . '/vendor/autoload.php';
 
 $app = AppFactory::create();
+$app->addBodyParsingMiddleware();
 $app->addRoutingMiddleware();
 $app->addErrorMiddleware(true, true, true);
-$app->add( function ($request, $handler) {
+$app->add(function ($request, $handler) {
     $response = $handler->handle($request);
 
     return $response
         ->withHeader('Access-Control-Allow-Origin', '*')
-        ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-        ->withHeader('Access-Control-Allow-Methods', 'OPTIONS, GET, POST, PUT, PATCH, DELETE')
-        ->withHeader('Content-Type', 'application/json')
-    ;
+        ->withHeader(
+            'Access-Control-Allow-Headers',
+            'X-Requested-With, Content-Type, Accept, Origin, Authorization'
+        )
+        ->withHeader(
+            'Access-Control-Allow-Methods',
+            'OPTIONS, GET, POST, PUT, PATCH, DELETE'
+        )
+        ->withHeader('Content-Type', 'application/json');
 });
 
 function createConnection() {
@@ -26,6 +32,7 @@ function createConnection() {
     $password = 'seminariophp';
 
     return new PDO($dsn, $username, $password);
-};
+}
+
 
 $app->run();
