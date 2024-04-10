@@ -34,5 +34,27 @@ function createConnection() {
     return new PDO($dsn, $username, $password);
 }
 
+$app->get('/localidades', function (Request $request, Response $response) {
+    $pdo = createConnection();
+
+    try {
+        $sql = 'SELECT * FROM localidades';
+        $query = $pdo->query($sql);
+        $results = $query->fetchAll(PDO::FETCH_ASSOC);
+        $data = ['status' => 'success', 'results' => $results];
+
+        $response->getBody()->write(json_encode($data));
+        return $response->withStatus(201);
+    } catch (\Exception $e) {
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'failure',
+                'error' => $e->getMessage(),
+            ])
+        );
+        return $response->withStatus(500);
+    }
+});
+
 
 $app->run();
