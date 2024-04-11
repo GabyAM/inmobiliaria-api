@@ -217,4 +217,59 @@ $app->put('/localidades/{id}', function (
     }
 });
 
+$app->delete('/localidades/{id}', function (
+    Request $request,
+    Response $response,
+    array $args
+) {
+    try {
+        $id = $args['id'];
+        if (!(is_numeric($id) && (int) $id == $id)) {
+            $response->getBody()->write(
+                json_encode([
+                    'status' => 'failure',
+                    'error' => 'El ID debe ser un valor numérico',
+                ])
+            );
+            return $response->withStatus(400);
+        }
+
+        $pdo = createConnection();
+
+        $sql = 'SELECT * FROM localidades WHERE id = :id';
+        $query = $pdo->prepare($sql);
+        $query->bindParam(':id', $id);
+        $query->execute();
+        if ($query->rowCount() == 0) {
+            $response->getBody()->write(
+                json_encode([
+                    'status' => 'failure',
+                    'error' => 'No existe una localidad con el ID provisto',
+                ])
+            );
+            return $response->withStatus(400);
+        }
+
+        $sql = 'DELETE FROM localidades WHERE id = :id';
+        $query = $pdo->prepare($sql);
+        $query->bindValue(':id', $id);
+        $query->execute();
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'success',
+                'message' => 'Localidad borrada',
+            ])
+        );
+        return $response->withStatus(200);
+    } catch (\Exception $e) {
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'failure',
+                'error' => $e->getMessage(),
+            ])
+        );
+        return $response->withStatus(500);
+    }
+});
+
 $app->run();
