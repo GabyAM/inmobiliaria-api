@@ -5,6 +5,7 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Factory\AppFactory;
 
 require __DIR__ . '/vendor/autoload.php';
+include './validaciones/localidad.php';
 
 $app = AppFactory::create();
 $app->addBodyParsingMiddleware();
@@ -61,30 +62,34 @@ $app->post('/localidades', function (Request $request, Response $response) {
     if (isset($data['nombre'])) {
         $nombre = $data['nombre'];
 
-        if (gettype($nombre) != 'string') {
-            $response->getBody()->write(
-                json_encode([
-                    'status' => 'failure',
-                    'error' => 'El nombre debe ser un string',
-                ])
-            );
-            return $response->withStatus(400);
-        }
-        if (strlen($nombre) > 50) {
-            $response->getBody()->write(
-                json_encode([
-                    'status' => 'failure',
-                    'error' =>
-                        'El nombre tiene que tener menos de 50 carácteres',
-                ])
-            );
+        $error = validarNombreLocalidad($nombre);
+        if ($error) {
+            $response
+                ->getBody()
+                ->write(
+                    json_encode(['status' => 'failure', 'error' => $error])
+                );
             return $response->withStatus(400);
         }
 
         $pdo = createConnection();
 
         try {
-            $sql = 'INSERT INTO localdades (nombre) VALUES (:nombre)';
+            $sql = 'SELECT * FROM localidades WHERE nombre = :nombre';
+            $query = $pdo->prepare($sql);
+            $query->bindValue(':nombre', $nombre);
+            $query->execute();
+            if ($query->rowCount() > 0) {
+                $response->getBody()->write(
+                    json_encode([
+                        'status' => 'failure',
+                        'error' => 'Ya existe una localidad con ese nombre',
+                    ])
+                );
+                return $response->withStatus(409);
+            }
+
+            $sql = 'INSERT INTO localidades (nombre) VALUES (:nombre)';
             $query = $pdo->prepare($sql);
             $query->bindValue(':nombre', $nombre);
             $query->execute();
@@ -95,7 +100,7 @@ $app->post('/localidades', function (Request $request, Response $response) {
                     'message' => 'Localidad creada',
                 ])
             );
-            return $response;
+            return $response->withStatus(201);
         } catch (\Exception $e) {
             $response->getBody()->write(
                 json_encode([
