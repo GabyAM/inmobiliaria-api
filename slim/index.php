@@ -272,4 +272,34 @@ $app->delete('/localidades/{id}', function (
     }
 });
 
+//TIPO DE PROPIEDADES
+$app->get('/tipo_propiedades',function(request $request,response $response) {
+
+    $pdo = createConnection(); //obtiene la direccion de la base de datos
+    try{
+        $sql = "SELECT * FROM tipo_propiedades";
+        $query = $pdo->query($sql); //pedido
+        $request = $query->fetchAll(PDO::FETCH_ASSOC); //obtiene toda la fila del resultado como array asociativo
+
+        $playload = json_encode ([  
+            "status"=>"success",    //exito
+            "code"=>200,            //ok
+            "data"=>$request
+        ]);
+
+        $response->getBody()->write($playload);
+        return $response->withHeader('content-type','application/json');
+    }
+    catch(PDOException $e){
+        $playload = json_encode ([  
+            "status"=>"failure",    
+            "code"=>404,            //not found-404/500?
+            "data"=>$request
+        ]);
+
+        $response->getBody()->write($playload);
+        return $response->withHeader('content.type','application/json');
+    }
+});
+
 $app->run();
