@@ -2,11 +2,11 @@
 
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use Respect\Validation\Exceptions\NestedValidationException;
 use Slim\Factory\AppFactory;
 use Respect\Validation\Validator as v;
 
 require __DIR__ . '/vendor/autoload.php';
-include './validaciones/localidad.php';
 
 $app = AppFactory::create();
 $app->addBodyParsingMiddleware();
@@ -27,6 +27,29 @@ $app->add(function ($request, $handler) {
         )
         ->withHeader('Content-Type', 'application/json');
 });
+
+function obtenerErrores($inputs, $validaciones) {
+    $errores = [];
+    foreach ($validaciones as $campo => $regla) {
+        $valor = isset($inputs[$campo]) ? $inputs[$campo] : null;
+        try {
+            $regla->assert($valor);
+        } catch (NestedValidationException $e) {
+            $errores[$campo] = $e->getMessages([
+                'notOptional' => 'Este campo es requerido',
+                'stringType' => 'Este campo debe ser de tipo string',
+                'intType' => 'Este campo debe ser un entero',
+                'numericVal' => 'Este campo debe ser un numero',
+                'boolType' => 'Este campo debe ser un booleano',
+                'date' =>
+                    'Este campo debe ser una fecha en el formato 2024-04-12',
+                'regex' => 'Este campo no está en el formato correcto',
+            ]);
+        }
+    }
+
+    return $errores;
+}
 
 function createConnection() {
     $dsn = 'mysql:host=db;dbname=seminariophp';
@@ -60,65 +83,56 @@ $app->get('/localidades', function (Request $request, Response $response) {
 
 $app->post('/localidades', function (Request $request, Response $response) {
     $data = $request->getParsedBody();
-    if (isset($data['nombre'])) {
-        $nombre = $data['nombre'];
+    $nombre = $data['nombre'] ?? null;
 
-        $error = validarNombreLocalidad($nombre);
-        if ($error) {
-            $response
-                ->getBody()
-                ->write(
-                    json_encode(['status' => 'failure', 'error' => $error])
-                );
-            return $response->withStatus(400);
-        }
+    $errores = obtenerErrores(
+        ['nombre' => $nombre],
+        ['nombre' => v::notOptional()->stringType()]
+    );
+    if (!empty($errores)) {
+        $response
+            ->getBody()
+            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
+        return $response->withStatus(400);
+    }
 
+    try {
         $pdo = createConnection();
 
-        try {
-            $sql = 'SELECT * FROM localidades WHERE nombre = :nombre';
-            $query = $pdo->prepare($sql);
-            $query->bindValue(':nombre', $nombre);
-            $query->execute();
-            if ($query->rowCount() > 0) {
-                $response->getBody()->write(
-                    json_encode([
-                        'status' => 'failure',
-                        'error' => 'Ya existe una localidad con ese nombre',
-                    ])
-                );
-                return $response->withStatus(409);
-            }
-
-            $sql = 'INSERT INTO localidades (nombre) VALUES (:nombre)';
-            $query = $pdo->prepare($sql);
-            $query->bindValue(':nombre', $nombre);
-            $query->execute();
-
-            $response->getBody()->write(
-                json_encode([
-                    'status' => 'success',
-                    'message' => 'Localidad creada',
-                ])
-            );
-            return $response->withStatus(201);
-        } catch (\Exception $e) {
+        $sql = 'SELECT * FROM localidades WHERE nombre = :nombre';
+        $query = $pdo->prepare($sql);
+        $query->bindValue(':nombre', $nombre);
+        $query->execute();
+        if ($query->rowCount() > 0) {
             $response->getBody()->write(
                 json_encode([
                     'status' => 'failure',
-                    'error' => $e->getMessage(),
+                    'error' => 'Ya existe una localidad con ese nombre',
                 ])
             );
-            return $response->withStatus(500);
+            return $response->withStatus(409);
         }
-    } else {
+
+        $sql = 'INSERT INTO localidades (nombre) VALUES (:nombre)';
+        $query = $pdo->prepare($sql);
+        $query->bindValue(':nombre', $nombre);
+        $query->execute();
+
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'success',
+                'message' => 'Localidad creada',
+            ])
+        );
+        return $response->withStatus(201);
+    } catch (\Exception $e) {
         $response->getBody()->write(
             json_encode([
                 'status' => 'failure',
-                'error' => 'No se ingreso un nombre',
+                'error' => $e->getMessage(),
             ])
         );
-        return $response->withStatus(400);
+        return $response->withStatus(500);
     }
 });
 
@@ -127,19 +141,31 @@ $app->put('/localidades/{id}', function (
     Response $response,
     array $args
 ) {
+    $data = $request->getParsedBody();
+    $id = $args['id'];
+    $nombre = $data['nombre'] ?? null;
+
+    $validaciones = [
+        'id' => v::notOptional()->numericVal(),
+        'nombre' => v::notOptional()->stringType(),
+    ];
+
+    $errores = obtenerErrores(
+        [
+            'id' => $id,
+            'nombre' => $nombre,
+        ],
+        $validaciones
+    );
+    if (!empty($errores)) {
+        $response
+            ->getBody()
+            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
+        return $response->withStatus(400);
+    }
+
     try {
         $pdo = createConnection();
-
-        $id = $args['id'];
-        if (!(is_numeric($id) && (int) $id == $id)) {
-            $response->getBody()->write(
-                json_encode([
-                    'status' => 'failure',
-                    'error' => 'El ID debe ser un valor numérico',
-                ])
-            );
-            return $response->withStatus(400);
-        }
 
         $sql = 'SELECT * FROM localidades WHERE id = :id';
         $query = $pdo->prepare($sql);
@@ -156,57 +182,34 @@ $app->put('/localidades/{id}', function (
             return $response->withStatus(400);
         }
 
-        $data = $request->getParsedBody();
-        if (isset($data['nombre'])) {
-            $nombre = $data['nombre'];
-            $error = validarNombreLocalidad($nombre);
-            if ($error) {
-                $response
-                    ->getBody()
-                    ->write(
-                        json_encode(['status' => 'failure', 'error' => $error])
-                    );
-                return $response->withStatus(400);
-            }
-
-            $sql =
-                'SELECT * FROM localidades WHERE nombre = :nombre AND id != :id';
-            $query = $pdo->prepare($sql);
-            $query->bindParam(':id', $id);
-            $query->bindParam(':nombre', $nombre);
-            $query->execute();
-            if ($query->rowCount() > 0) {
-                $response->getBody()->write(
-                    json_encode([
-                        'status' => 'failure',
-                        'error' => 'Ya existe una localidad con ese nombre',
-                    ])
-                );
-                return $response->withStatus(409);
-            }
-
-            $sql = 'UPDATE localidades SET nombre = :nombre WHERE id = :id';
-            $query = $pdo->prepare($sql);
-            $query->bindParam(':id', $id);
-            $query->bindParam(':nombre', $nombre);
-            $query->execute();
-
-            $response->getBody()->write(
-                json_encode([
-                    'status' => 'success',
-                    'message' => 'Localidad actualizada',
-                ])
-            );
-            return $response->withStatus(200);
-        } else {
+        $sql = 'SELECT * FROM localidades WHERE nombre = :nombre AND id != :id';
+        $query = $pdo->prepare($sql);
+        $query->bindParam(':id', $id);
+        $query->bindParam(':nombre', $nombre);
+        $query->execute();
+        if ($query->rowCount() > 0) {
             $response->getBody()->write(
                 json_encode([
                     'status' => 'failure',
-                    'error' => 'No se ingreso un nombre',
+                    'error' => 'Ya existe una localidad con ese nombre',
                 ])
             );
-            return $response->withStatus(400);
+            return $response->withStatus(409);
         }
+
+        $sql = 'UPDATE localidades SET nombre = :nombre WHERE id = :id';
+        $query = $pdo->prepare($sql);
+        $query->bindParam(':id', $id);
+        $query->bindParam(':nombre', $nombre);
+        $query->execute();
+
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'success',
+                'message' => 'Localidad actualizada',
+            ])
+        );
+        return $response->withStatus(200);
     } catch (\Exception $e) {
         $response->getBody()->write(
             json_encode([
@@ -223,18 +226,19 @@ $app->delete('/localidades/{id}', function (
     Response $response,
     array $args
 ) {
-    try {
-        $id = $args['id'];
-        if (!(is_numeric($id) && (int) $id == $id)) {
-            $response->getBody()->write(
-                json_encode([
-                    'status' => 'failure',
-                    'error' => 'El ID debe ser un valor numérico',
-                ])
-            );
-            return $response->withStatus(400);
-        }
+    $id = $args['id'];
+    $errores = obtenerErrores(
+        ['id' => $id],
+        ['id' => v::notOptional()->numericVal()]
+    );
+    if (!empty($errores)) {
+        $response
+            ->getBody()
+            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
+        return $response->withStatus(400);
+    }
 
+    try {
         $pdo = createConnection();
 
         $sql = 'SELECT * FROM localidades WHERE id = :id';
@@ -298,41 +302,27 @@ $app->get('/propiedades', function (Request $request, Response $response) {
 $app->post('/propiedades', function (Request $request, Response $response) {
     $data = $request->getParsedBody();
     $validaciones = [
-        'domicilio' => v::notEmpty()->stringType(),
-        'localidad_id' => v::notEmpty()->intVal(),
-        'cantidad_habitaciones' => v::optional(v::intVal()),
-        'cantidad_banios' => v::optional(v::intVal()),
+        'domicilio' => v::notOptional()->stringType(),
+        'localidad_id' => v::notOptional()->intType(),
+        'cantidad_habitaciones' => v::optional(v::intType()),
+        'cantidad_banios' => v::optional(v::intType()),
         'cochera' => v::optional(v::boolType()),
-        'cantidad_huespedes' => v::notEmpty()->intVal(),
-        'fecha_inicio_disponibilidad' => v::notEmpty()->date(),
-        'cantidad_dias' => v::notEmpty()->intVal(),
+        'cantidad_huespedes' => v::notOptional()->intType(),
+        'fecha_inicio_disponibilidad' => v::notOptional()->date(),
+        'cantidad_dias' => v::notOptional()->intType(),
         'disponible' => v::optional(v::boolType()), //Lo hago opcional por el momento porque por algún motivo no se valida correctamente
-        'valor_noche' => v::notEmpty()->intVal(),
-        'tipo_propiedad_id' => v::notEmpty()->intVal(),
+        'valor_noche' => v::notOptional()->intType(),
+        'tipo_propiedad_id' => v::notOptional()->intType(),
         'imagen' => v::optional(v::stringType()),
         'tipo_imagen' => v::optional(v::regex('/jpg|jpeg|png/')),
     ];
 
-    $errores = [];
-    foreach ($validaciones as $campo => $regla) {
-        $valor = isset($data[$campo]) ? $data[$campo] : null;
-        try {
-            $regla->assert($valor);
-        } catch (\Respect\Validation\Exceptions\NestedValidationException $e) {
-            $errores[$campo] = $e->getMessages([
-                'notEmpty' => 'Este campo es requerido',
-                'stringType' => 'Este campo debe ser de tipo string',
-                'intVal' => 'Este campo debe ser un entero',
-                'boolType' => 'Este campo debe ser un booleano',
-                'date' =>
-                    'Este campo debe ser una fecha en el formato 2024-04-12',
-                'regex' => 'Este campo no está en el formato correcto',
-            ]);
-        }
-    }
+    $errores = obtenerErrores($data, $validaciones);
 
     if (!empty($errores)) {
-        $response->getBody()->write(json_encode(['errors' => $errores]));
+        $response
+            ->getBody()
+            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
         return $response->withStatus(400);
     }
 
