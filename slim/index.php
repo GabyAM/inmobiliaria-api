@@ -314,7 +314,25 @@ $app->get('/propiedades', function (Request $request, Response $response) {
 });
 
 $app->post('/propiedades', function (Request $request, Response $response) {
-    $data = $request->getParsedBody();
+    $data = array_intersect_key(
+        $request->getParsedBody() ?? [],
+        array_flip([
+            'domicilio',
+            'localidad_id',
+            'cantidad_habitaciones',
+            'cantidad_banios',
+            'cochera',
+            'cantidad_huespedes',
+            'fecha_inicio_disponibilidad',
+            'cantidad_dias',
+            'disponible',
+            'valor_noche',
+            'tipo_propiedad_id',
+            'imagen',
+            'tipo_imagen',
+        ])
+    ); //creo un nuevo array con los campos necesarios para no operar sobre campos adicionales/incorrectos
+
     $validaciones = [
         'domicilio' => v::notOptional()->stringType(),
         'localidad_id' => v::notOptional()->intType(),
