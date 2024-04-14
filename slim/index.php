@@ -28,23 +28,37 @@ $app->add(function ($request, $handler) {
         ->withHeader('Content-Type', 'application/json');
 });
 
-function obtenerErrores($inputs, $validaciones) {
+function obtenerErrores($inputs, $validaciones, $opcionales = false) {
+    $mensajes = [
+        'notOptional' => 'Este campo es requerido',
+        'stringType' => 'Este campo debe ser de tipo string',
+        'intType' => 'Este campo debe ser un entero',
+        'numericVal' => 'Este campo debe ser un numero',
+        'boolType' => 'Este campo debe ser un booleano',
+        'date' => 'Este campo debe ser una fecha en el formato 2024-04-12',
+        'regex' => 'Este campo no está en el formato correcto',
+    ];
     $errores = [];
-    foreach ($validaciones as $campo => $regla) {
-        $valor = isset($inputs[$campo]) ? $inputs[$campo] : null;
-        try {
-            $regla->assert($valor);
-        } catch (NestedValidationException $e) {
-            $errores[$campo] = $e->getMessages([
-                'notOptional' => 'Este campo es requerido',
-                'stringType' => 'Este campo debe ser de tipo string',
-                'intType' => 'Este campo debe ser un entero',
-                'numericVal' => 'Este campo debe ser un numero',
-                'boolType' => 'Este campo debe ser un booleano',
-                'date' =>
-                    'Este campo debe ser una fecha en el formato 2024-04-12',
-                'regex' => 'Este campo no está en el formato correcto',
-            ]);
+    if ($opcionales) {
+        foreach ($validaciones as $campo => $regla) {
+            if (isset($inputs[$campo])) {
+                $valor = $inputs[$campo];
+                try {
+                    $regla->assert($valor);
+                } catch (NestedValidationException $e) {
+                    $errores[$campo] = $e->getMessages($mensajes);
+                }
+            }
+        }
+    } else {
+        foreach ($validaciones as $campo => $regla) {
+            $valor = isset($inputs[$campo]) ? $inputs[$campo] : null;
+            // echo $campo . ': ' . (string) $valor; //debug
+            try {
+                $regla->assert($valor);
+            } catch (NestedValidationException $e) {
+                $errores[$campo] = $e->getMessages($mensajes);
+            }
         }
     }
 
@@ -400,6 +414,134 @@ $app->post('/propiedades', function (Request $request, Response $response) {
             ])
         );
         return $response->withStatus(500);
+    }
+});
+
+$app->put('/propiedades/{id}', function (
+    Request $request,
+    Response $response,
+    array $args
+) {
+    $data = array_intersect_key(
+        $request->getParsedBody() ?? [],
+        array_flip([
+            'domicilio',
+            'localidad_id',
+            'cantidad_habitaciones',
+            'cantidad_banios',
+            'cochera',
+            'cantidad_huespedes',
+            'fecha_inicio_disponibilidad',
+            'cantidad_dias',
+            'disponible',
+            'valor_noche',
+            'tipo_propiedad_id',
+            'imagen',
+            'tipo_imagen',
+        ])
+    );
+    if (empty($data)) {
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'failure',
+                'error' => 'No se insertó ningún valor',
+            ])
+        );
+        return $response->withStatus(400);
+    }
+
+    $id = $args['id'];
+    $validaciones = [
+        'id' => v::notOptional()->numericVal(),
+        'domicilio' => v::stringType(),
+        'localidad_id' => v::intType(),
+        'cantidad_habitaciones' => v::intType(),
+        'cantidad_banios' => v::intType(),
+        'cochera' => v::boolType(),
+        'cantidad_huespedes' => v::intType(),
+        'fecha_inicio_disponibilidad' => v::date(),
+        'cantidad_dias' => v::intType(),
+        'disponible' => v::boolType(),
+        'valor_noche' => v::intType(),
+        'tipo_propiedad_id' => v::intType(),
+        'imagen' => v::stringType(),
+        'tipo_imagen' => v::regex('/jpg|jpeg|png/'),
+    ];
+
+    $errores = obtenerErrores([...$data, 'id' => $id], $validaciones, true);
+    if (!empty($errores)) {
+        $response
+            ->getBody()
+            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
+        return $response->withStatus(400);
+    }
+
+    try {
+        $pdo = createConnection();
+
+        if (isset($data['localidad_id'])) {
+            $localidadId = $data['localidad_id'];
+            $sql = 'SELECT FROM localidades WHERE id = :id';
+            $query = $pdo->prepare($sql);
+            $query->bindValue(':id', $localidadId);
+            if ($query->rowCount() != 1) {
+                $response->getBody()->write(
+                    json_encode([
+                        'status' => 'failure',
+                        'error' => 'No existe una localidad con el ID provisto',
+                    ])
+                );
+                return $response->withStatus(400);
+            }
+        }
+        if (isset($data['tipo_propiedad_id'])) {
+            $tipoPropiedadId = $data['tipo_propiedad_id'];
+            $sql = 'SELECT FROM tipo_propiedades WHERE id = :id';
+            $query = $pdo->prepare($sql);
+            $query->bindValue(':id', $tipoPropiedadId);
+            if ($query->rowCount() != 1) {
+                $response->getBody()->write(
+                    json_encode([
+                        'status' => 'failure',
+                        'error' =>
+                            'No existe un tipo de propiedad con el ID provisto',
+                    ])
+                );
+                return $response->withStatus(400);
+            }
+        }
+
+        $stringActualizaciones = '';
+        $i = 0;
+        foreach ($data as $key => $value) {
+            $stringActualizaciones .= $key . ' = ';
+            if (is_bool($value)) {
+                $stringActualizaciones .= $value ? 'true' : 'false';
+            } elseif (is_string($value)) {
+                $stringActualizaciones .= '"' . $value . '"';
+            } else {
+                $stringActualizaciones .= $value;
+            }
+            if ($i < count($data) - 1) {
+                $stringActualizaciones .= ', ';
+            }
+            $i++;
+        }
+        $sql =
+            'UPDATE propiedades SET ' .
+            $stringActualizaciones .
+            ' WHERE id = :id';
+        $query = $pdo->prepare($sql);
+        $query->bindValue(':id', $id);
+        $query->execute();
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'success',
+                'message' => 'Propiedad actualizada',
+            ])
+        );
+        return $response->withStatus(200);
+    } catch (Exception $e) {
     }
 });
 
