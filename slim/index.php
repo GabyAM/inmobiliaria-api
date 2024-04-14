@@ -625,4 +625,25 @@ $app->delete('/propiedades/{id}', function (
     }
 });
 
+$app->get('/reservas', function (Request $request, Response $response) {
+    try {
+        $pdo = createConnection();
+        $sql = 'SELECT * FROM reservas';
+        $query = $pdo->query($sql);
+        $results = $query->fetchAll(PDO::FETCH_ASSOC);
+        $data = ['status' => 'success', 'results' => $results];
+
+        $response->getBody()->write(json_encode($data));
+        return $response->withStatus(200);
+    } catch (\Exception $e) {
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'failure',
+                'error' => $e->getMessage(),
+            ])
+        );
+        return $response->withStatus(500);
+    }
+});
+
 $app->run();
