@@ -559,7 +559,69 @@ $app->put('/propiedades/{id}', function (
             ])
         );
         return $response->withStatus(200);
-    } catch (Exception $e) {
+    } catch (\Exception $e) {
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'failure',
+                'error' => $e->getMessage(),
+            ])
+        );
+        return $response->withStatus(500);
+    }
+});
+
+$app->delete('/propiedades/{id}', function (
+    Request $request,
+    Response $response,
+    array $args
+) {
+    $id = $args['id'];
+    $errores = obtenerErrores(
+        ['id' => $id],
+        ['id' => v::notOptional()->numericVal()]
+    );
+    if (!empty($errores)) {
+        $response
+            ->getBody()
+            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
+        return $response->withStatus(400);
+    }
+    try {
+        $pdo = createConnection();
+
+        $sql = 'SELECT * FROM propiedades WHERE id = :id';
+        $query = $pdo->prepare($sql);
+        $query->bindValue(':id', $id);
+        $query->execute();
+        if ($query->rowCount() == 0) {
+            $response->getBody()->write(
+                json_encode([
+                    'status' => 'failure',
+                    'error' => 'No existe una propiedad con el ID provisto',
+                ])
+            );
+            return $response;
+        }
+
+        $sql = 'DELETE FROM propiedades WHERE id = :id';
+        $query = $pdo->prepare($sql);
+        $query->bindValue(':id', $id);
+        $query->execute();
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'success',
+                'message' => 'Propiedad borrada',
+            ])
+        );
+        return $response;
+    } catch (\Exception $e) {
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'failure',
+                'error' => $e->getMessage(),
+            ])
+        );
+        return $response->withStatus(500);
     }
 });
 
