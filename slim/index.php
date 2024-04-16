@@ -160,7 +160,7 @@ $app->put('/localidades/{id}', function (
     $nombre = $data['nombre'] ?? null;
 
     $validaciones = [
-        'id' => v::notOptional()->numericVal(),
+        'id' => v::notOptional()->regex('/^[0-9]+$/'),
         'nombre' => v::notOptional()->stringType(),
     ];
 
@@ -242,7 +242,7 @@ $app->delete('/localidades/{id}', function (
     $id = $args['id'];
     $errores = obtenerErrores(
         ['id' => $id],
-        ['id' => v::notOptional()->numericVal()]
+        ['id' => v::notOptional()->regex('/^[0-9]+$/')]
     );
     if (!empty($errores)) {
         $response
@@ -469,7 +469,7 @@ $app->put('/propiedades/{id}', function (
 
     $id = $args['id'];
     $validaciones = [
-        'id' => v::notOptional()->numericVal(),
+        'id' => v::notOptional()->regex('/^[0-9]+$/'),
         'domicilio' => v::stringType(),
         'localidad_id' => v::intType(),
         'cantidad_habitaciones' => v::intType(),
@@ -574,7 +574,7 @@ $app->delete('/propiedades/{id}', function (
     $id = $args['id'];
     $errores = obtenerErrores(
         ['id' => $id],
-        ['id' => v::notOptional()->numericVal()]
+        ['id' => v::notOptional()->regex('/^[0-9]+$/')]
     );
     if (!empty($errores)) {
         $response
