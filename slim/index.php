@@ -644,59 +644,71 @@ $app->post('/reservas', function (Request $request, Response $response) {
 
 //tipos de propiedades--------------------------------------
 
-$app->get('/tipo_propiedades',function(request $request,response $response) {
-
+$app->get('/tipo_propiedades', function (request $request, response $response) {
     $pdo = createConnection(); //obtiene la direccion de la base de datos
-    try{
-     $sql = 'SELECT * FROM tipo_propiedades';
-     $query = $pdo->query($sql); //query(consulta)
+    try {
+        $sql = 'SELECT * FROM tipo_propiedades';
+        $query = $pdo->query($sql); //query(consulta)
 
-     $data = $query->fetchAll(PDO::FETCH_ASSOC); //fetchAll:arreglo asociativo
-     
-     $response->getBody()->write(json_encode([
-        "status" => "success",
-        "data"=> $data
-        ]));
+        $data = $query->fetchAll(PDO::FETCH_ASSOC); //fetchAll:arreglo asociativo
 
-     return $response->withStatus(200);
-    }
-    catch(\Exception $e){
-     $response->getBody()->write(json_encode([
-        'status' => 'success',
-        'data'=>$e->getMessage()
-        ]));
-     return $response->withStatus(500);
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'success',
+                'data' => $data,
+            ])
+        );
+
+        return $response->withStatus(200);
+    } catch (\Exception $e) {
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'success',
+                'data' => $e->getMessage(),
+            ])
+        );
+        return $response->withStatus(500);
     }
 });
 
-$app->post('/tipo_propiedades', function(request $request, response $response){
+$app->post('/tipo_propiedades', function (
+    request $request,
+    response $response
+) {
     $data = $request->getParsedBody();
     $nombre = $data['nombre'] ?? null;
 
-    $errores = obtenerErrores(['nombre'=>$nombre],['nombre'=>v::notOptional()->stringType()]);
+    $errores = obtenerErrores(
+        ['nombre' => $nombre],
+        ['nombre' => v::notOptional()->stringType()]
+    );
 
-    if(!empty($errores)){
-        $response->getBody()->write(json_encode([
-            'succes'=>'failure',
-            'error'=>$errores
-        ]));
+    if (!empty($errores)) {
+        $response->getBody()->write(
+            json_encode([
+                'succes' => 'failure',
+                'error' => $errores,
+            ])
+        );
         return $response->withStatus(400);
     }
 
-    try{
+    try {
         $pdo = createConnection();
         $sql = "SELECT * from tipo_propiedades
         where nombre = :nombre";
 
         $query = $pdo->prepare($sql);
-        $query->bindValue('nombre',$nombre);
+        $query->bindValue('nombre', $nombre);
         $query->execute();
 
-        if($query->rowCont() > 0){
-            $response->getBody()->write(json_encode([
-                'status'=>'failure',
-                'message'=>'el campo nombre no se puede repetir'
-            ]));
+        if ($query->rowCount() > 0) {
+            $response->getBody()->write(
+                json_encode([
+                    'status' => 'failure',
+                    'message' => 'el campo nombre no se puede repetir',
+                ])
+            );
 
             return $response->withStatus(400);
         }
@@ -705,16 +717,17 @@ $app->post('/tipo_propiedades', function(request $request, response $response){
         values (:nombre)";
 
         $query = $pdo->prepare($sql);
-        $query->bindValue(':nombre',$nombre);
+        $query->bindValue(':nombre', $nombre);
         $query->execute();
 
-        $response->getBody()->write(json_encode([
-            'status'=>'success',
-            'message'=>'tipo de propiedad creada'
-        ]));
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'success',
+                'message' => 'tipo de propiedad creada',
+            ])
+        );
         return $response->withStatus(200);
-    }
-    catch(\Exception $e){
+    } catch (\Exception $e) {
         $response->getBody()->write(
             json_encode([
                 'status' => 'failure',
@@ -723,10 +736,13 @@ $app->post('/tipo_propiedades', function(request $request, response $response){
         );
         return $response->withStatus(500);
     }
-
 });
 
-$app->put('/tipo_propiedades/{id}',function(request $request, response $response,array $args){
+$app->put('/tipo_propiedades/{id}', function (
+    request $request,
+    response $response,
+    array $args
+) {
     $data = $request->getParsedBody();
     $id = $args['id'];
     $nombre = $data['nombre'] ?? null;
@@ -735,31 +751,35 @@ $app->put('/tipo_propiedades/{id}',function(request $request, response $response
         'id' => v::notOptional()->regex('/^[0-9]+$/'),
         'nombre' => v::notOptional()->stringType(),
     ];
-    
-    $errores = obtenerErrores($args,$validaciones);
 
-    if(!empty($errores)){
-        $response->getBody()->write(json_encode([
-            'status'=>'failure',
-            'errores'=>$errores
-        ]));
+    $errores = obtenerErrores($args, $validaciones);
+
+    if (!empty($errores)) {
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'failure',
+                'errores' => $errores,
+            ])
+        );
         return $response->withStatus(400);
     }
-    try{
+    try {
         $pdo = createConnection();
         $sql = "SELECT * from tipo_propiedades
         where id = :id";
 
         $query = $pdo->prepare($sql);
-        $query->bindValue(':id',$id);
+        $query->bindValue(':id', $id);
         $query->execute();
 
-        if($query->rowcont() == 0){
-            $response->getBody()->write(json_encode([
-                'status'=>'failure',
-                'message'=>'no existe una propiedad con el ID provisto'
-            ]));
-            return $response->withStatus(204);
+        if ($query->rowCount() == 0) {
+            $response->getBody()->write(
+                json_encode([
+                    'status' => 'failure',
+                    'message' => 'no existe una propiedad con el ID provisto',
+                ])
+            );
+            return $response->withStatus(400);
         }
 
         $sql = 'SELECT * FROM localidades WHERE nombre = :nombre AND id != :id'; //busco si existe un mismo nombre con otra ID
@@ -767,11 +787,13 @@ $app->put('/tipo_propiedades/{id}',function(request $request, response $response
         $query->bindParam(':id', $id);
         $query->bindParam(':nombre', $nombre);
         $query->execute();
-        if ($query->rowCount() > 0){
-            $response->getBody()->write(json_encode([
-                'status'=>'failure',
-                'message'=>'ya existe otra propiedad con el mismo nombre'
-            ]));
+        if ($query->rowCount() > 0) {
+            $response->getBody()->write(
+                json_encode([
+                    'status' => 'failure',
+                    'message' => 'ya existe otra propiedad con el mismo nombre',
+                ])
+            );
             return $response->withStatus(400);
         }
 
@@ -779,19 +801,20 @@ $app->put('/tipo_propiedades/{id}',function(request $request, response $response
         set nombre = :nombre
         where id = :id";
 
-        $pdo->prepare($sql);
-        $pdo->bindValue(':nombre',$nombre);
-        $pdo->bindValue(':id',$id);
-        $pdo->execute();
+        $query = $pdo->prepare($sql);
+        $query->bindValue(':nombre', $nombre);
+        $query->bindValue(':id', $id);
+        $query->execute();
 
-        $response->getBody()->write(json_encode([
-            'status'=>'success',
-            'message'=>'se actualizo con exito'
-        ]));
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'success',
+                'message' => 'se actualizo con exito',
+            ])
+        );
 
         return $response->withStatus(200);
-    }
-    catch(\Exception $e){
+    } catch (\Exception $e) {
         $response->getBody()->write(
             json_encode([
                 'status' => 'failure',
@@ -802,49 +825,61 @@ $app->put('/tipo_propiedades/{id}',function(request $request, response $response
     }
 });
 
-$app->delete('/tipo_propiedades',function(request $request,response $response, array $args){
-    $data = $query->getParsedBody();
+$app->delete('/tipo_propiedades', function (
+    request $request,
+    response $response,
+    array $args
+) {
+    $data = $request->getParsedBody();
     $id = $args['id'];
 
-    $errores = obtenerErrores(['id'=>$id],['id'=>v::notOptional()->intType()]);
+    $errores = obtenerErrores(
+        ['id' => $id],
+        ['id' => v::notOptional()->intType()]
+    );
 
-    if(!isset($errores)){
-        $response->getBody()->write(json_encode([
-            'status'=>'failure',
-            'errores'=>$errores
-        ]));
-        return $response->withsStatus(400);
+    if (!isset($errores)) {
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'failure',
+                'errores' => $errores,
+            ])
+        );
+        return $response->withStatus(400);
     }
-    try{
+    try {
         $pdo = createConnection();
         $sql = "SELECT * from tipo_propiedades
         where id = :id";
 
         $query = $pdo->prepare($sql);
-        $query->bindValue(':id',$id);
+        $query->bindValue(':id', $id);
         $query->execute();
 
-        if ($query->rowCont() == 0){
-            $response->getBody()->write(json_code([
-                'status'=>'failure',
-                'message'=>'no existe una propiedad con el ID provisto'
-            ]));
+        if ($query->rowCount() == 0) {
+            $response->getBody()->write(
+                json_encode([
+                    'status' => 'failure',
+                    'message' => 'no existe una propiedad con el ID provisto',
+                ])
+            );
             return $response->withStatus(400);
         }
 
         $sql = "DELETE * from tipo_propiedades
         where id = :id";
 
-        $pdo->prepare($sql);
-        $pdo->bindValue(':id',$id);
-        $pdo->execute();
-        $response->getBody()->write(json_encode([
-            'status'=>'success',
-            'message'=>'se ELIMINO la propiedad'
-        ]));
+        $query = $pdo->prepare($sql);
+        $query->bindValue(':id', $id);
+        $query->execute();
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'success',
+                'message' => 'se ELIMINO la propiedad',
+            ])
+        );
         return $response->withStatus(200);
-    }
-    catch(\Exception $e){
+    } catch (\Exception $e) {
         $response->getBody()->write(
             json_encode([
                 'status' => 'failure',
@@ -857,59 +892,63 @@ $app->delete('/tipo_propiedades',function(request $request,response $response, a
 
 //inquilinos--------------------------------------------
 
-$app->get('/inquilonos', function(request $request, response $response){
+$app->get('/inquilonos', function (request $request, response $response) {
     $pdo = createConnection();
 
     $sql = 'SELECT * From inquilinos';
     $query = $pdo->query($sql);
     $data = $query->fetchAll(PDO::FETCH_ASSOC);
-    $playload = json_encode([
+    $payload = json_encode([
         'status' => 'succes',
-        'data'=> $data
+        'data' => $data,
     ]);
 
-    $response->getBody()->write($layload);
+    $response->getBody()->write($payload);
     return $response->withStatus(200);
 });
 
-$app->post('/inquilinos',function(request $request, response $response){
+$app->post('/inquilinos', function (request $request, response $response) {
     $data = $request->getParsedBody();
 
     $validaciones = [
-    'id'=>v::notOptional()->intType(),
-    'documento'=>v::notoptional()->stringType()->length(null,20),
-    'apellido'=>v::notOptional()->stringType()->length(null,15),
-    'nombre'=>v::notOptional()->stringTypr()->legth(null,25),
-    'email'=>v::notOptional()->stringType()->length(null,20),
-    'activo'=>v::notOptional()->booleanType()];
+        'id' => v::notOptional()->intType(),
+        'documento' => v::notoptional()->stringType()->length(null, 20),
+        'apellido' => v::notOptional()->stringType()->length(null, 15),
+        'nombre' => v::notOptional()->stringType()->length(null, 25),
+        'email' => v::notOptional()->stringType()->length(null, 20),
+        'activo' => v::notOptional()->boolType(),
+    ];
 
-    $errores = obtenerErrores($data,$validaciones);
-    
-    if (!empty($errores)){
-        $response->getBody()->write(json_encode([
-            'status'=>'failure',
-            'error'=>$errores
-        ]));
+    $errores = obtenerErrores($data, $validaciones);
+
+    if (!empty($errores)) {
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'failure',
+                'error' => $errores,
+            ])
+        );
         return $response->withStatus(400);
     }
 
-    try{
+    try {
         $documento = $data['docuemento'];
 
         $pdo = createConnection();
-        $sql = 
-        'SELECT * from inquilinos 
+        $sql = 'SELECT * from inquilinos 
         where documento = :documento ';
 
         $query = $pdo->prepare($sql);
-        $query->brandValure(':documentos',documento);
+        $query->bindValue(':documento', $documento);
         $query->execute();
 
-        if($query > 0){
-            $response->getBody()->write(json_encode([
-                'status'=>'failure',
-                'message'=>'no se puede repetir el Documento'
-            ]));
+        if ($query > 0) {
+            $response->getBody()->write(
+                json_encode([
+                    'status' => 'failure',
+                    'message' => 'no se puede repetir el Documento',
+                ])
+            );
         }
 
         $stringCampos = '';
@@ -931,39 +970,43 @@ $app->post('/inquilinos',function(request $request, response $response){
             }
         }
 
-        $sql = 
-        'INSERT into inquilinos ('.$stringCampos.')
-        values ('.$stringValores.')';
+        $sql =
+            'INSERT into inquilinos (' .
+            $stringCampos .
+            ')
+        values (' .
+            $stringValores .
+            ')';
 
         $pdo->query($sql);
 
-        $response->getBody()->write(json_encode([
-            'status'=>'succes',
-            'message'=>'propiedad creada'
-        ]));
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'succes',
+                'message' => 'propiedad creada',
+            ])
+        );
 
         return $response->withStatus(200);
-
-    }catch(exception $e){
-        $response->getBody()->write(json_encode([
-            'status'=>'failure',
-            'message'=>$e->getMessage()
-        ]));
+    } catch (exception $e) {
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'failure',
+                'message' => $e->getMessage(),
+            ])
+        );
         return $response->withStatus(500);
     }
 });
 
-$app->put('/inquilinos/{id}', function(request $request, response $response, array $args){
+$app->put('/inquilinos/{id}', function (
+    request $request,
+    response $response,
+    array $args
+) {
     $data = array_intersect_key(
         $request->getParsedBody() ?? [],
-        array_flip([
-            'id',
-            'documento',
-            'apellido',
-            'nombre',
-            'email',
-            'activo'
-        ])
+        array_flip(['id', 'documento', 'apellido', 'nombre', 'email', 'activo'])
     );
 
     if (empty($data)) {
@@ -976,41 +1019,49 @@ $app->put('/inquilinos/{id}', function(request $request, response $response, arr
         return $response->withStatus(400);
     }
 
+    $documento = $args['documento'] ?? null;
+    $id = $args['id'] ?? null;
 
-	$documento = $arg['documento'] ?? null;
-	$id = $arg['id'] ?? null;
-	
-	$verificacion = [
-    'id'=>v::notOptional()->intType(),
-	'documento'=>v::notOptional()->stringType(),
-    'nombre'=>v::notOptional()->stringType(),
-	'email'=>v::notOptional()->stringType(),
-	'activo'=>v::notOptional()->booleanType()];
-	
-	$errores = obtenerErrores([...$data,'id'=>$id,'documento'=>$documento],$verificacion);
+    $verificacion = [
+        'id' => v::notOptional()->intType(),
+        'documento' => v::notOptional()->stringType(),
+        'nombre' => v::notOptional()->stringType(),
+        'email' => v::notOptional()->stringType(),
+        'activo' => v::notOptional()->boolType(),
+    ];
 
-    if (!empty($errores)){ //esta vacia?
-        $response->getBody()->write(json_encode([
-            'status'=>'failure',
-            'message'=>$errores
-        ]));
+    $errores = obtenerErrores(
+        [...$data, 'id' => $id, 'documento' => $documento],
+        $verificacion
+    );
+
+    if (!empty($errores)) {
+        //esta vacia?
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'failure',
+                'message' => $errores,
+            ])
+        );
         return $response->withStatus(400);
     }
 
-    try{
+    try {
         $pdo = createConnection();
         $sql = 'SELECT * From inquilinos
         where id = :id';
 
         $query = $pdo->prepare($sql);
-        $query->bindValoue(':id',$id);
+        $query->bindValue(':id', $id);
         $query->execute();
 
-        if ($query->rowCount() == 0){
-            $response->getBody()->write(json_encode([
-                'status'=>'failure',
-                'error'=>'no existe nignun inquilino con la id provista'
-            ]));
+        if ($query->rowCount() == 0) {
+            $response->getBody()->write(
+                json_encode([
+                    'status' => 'failure',
+                    'error' => 'no existe nignun inquilino con la id provista',
+                ])
+            );
             return $response->withstatus(400);
         }
 
@@ -1018,14 +1069,16 @@ $app->put('/inquilinos/{id}', function(request $request, response $response, arr
         where documento = :documento';
 
         $query = $pdo->prepare($sql);
-        $query->bindValue(':documento',$documento);
+        $query->bindValue(':documento', $documento);
         $query->execute();
 
-        if($query->rowCont() == 0){
-            $response->getBody()->witre(json_encode([
-                'status'=>'failure',
-                'error'=>'no existe ningun el documento provisto'
-            ]));
+        if ($query->rowCount() == 0) {
+            $response->getBody()->write(
+                json_encode([
+                    'status' => 'failure',
+                    'error' => 'no existe ningun el documento provisto',
+                ])
+            );
             return $response->withStatus(400);
         }
 
@@ -1045,30 +1098,31 @@ $app->put('/inquilinos/{id}', function(request $request, response $response, arr
                 $i++;
             }
         }
-        $sql =
-            "UPDATE propiedades 
+        $sql = "UPDATE propiedades 
             SET ' .$stringActualizaciones .' 
             WHERE id = :id and documento = :documento";
 
         $query = $pdo->prepare($sql);
-        $query->bindValue(':id',$id);
-        $query->bindValue(':documento',$documento);
+        $query->bindValue(':id', $id);
+        $query->bindValue(':documento', $documento);
         $query->execute();
 
-        $response->getBody()->write(json_encode([
-            'status'=>'success',
-            'message'=>'se actualizo los inquilinos'
-        ]));
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'success',
+                'message' => 'se actualizo los inquilinos',
+            ])
+        );
 
         return $response->withStatus(200);
-    }
-    catch(exception $e){
-        $response->getBody()->write(json_encode([
-            'status'=>'failure',
-            'message'=>$e->getMessage()
-        ]));
+    } catch (exception $e) {
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'failure',
+                'message' => $e->getMessage(),
+            ])
+        );
         return $response->withStatus(500);
-
     }
 });
 
