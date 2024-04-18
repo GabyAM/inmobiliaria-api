@@ -732,7 +732,10 @@ $app->put('/tipo_propiedades/{id}', function (
         'nombre' => v::notOptional()->stringType(),
     ];
 
-    $errores = obtenerErrores($args, $validaciones);
+    $errores = obtenerErrores(
+        ['id' => $id, 'nombre' => $nombre],
+        $validaciones
+    );
 
     if (!empty($errores)) {
         $response->getBody()->write(
@@ -835,8 +838,7 @@ $app->delete('/tipo_propiedades/{id}', function (
         return $response->withStatus(400);
     }
 
-    $sql = "DELETE * FROM tipo_propiedades
-        WHERE id = :id";
+    $sql = 'DELETE FROM tipo_propiedades WHERE id = :id';
 
     $query = $pdo->prepare($sql);
     $query->bindValue(':id', $id);
