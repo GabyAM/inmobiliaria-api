@@ -644,7 +644,7 @@ $app->post('/reservas', function (Request $request, Response $response) {
 
 //tipos de propiedades--------------------------------------
 
-$app->get('/tipo_propiedades', function (request $request, response $response) {
+$app->get('/tipo_propiedades', function (Request $request, Response $response) {
     $pdo = createConnection(); //obtiene la direccion de la base de datos
     $sql = 'SELECT * FROM tipo_propiedades';
     $query = $pdo->query($sql); //query(consulta)
@@ -662,8 +662,8 @@ $app->get('/tipo_propiedades', function (request $request, response $response) {
 });
 
 $app->post('/tipo_propiedades', function (
-    request $request,
-    response $response
+    Request $request,
+    Response $response
 ) {
     $data = $request->getParsedBody();
     $nombre = $data['nombre'] ?? null;
@@ -676,19 +676,19 @@ $app->post('/tipo_propiedades', function (
     if (!empty($errores)) {
         $response->getBody()->write(
             json_encode([
-                'succes' => 'failure',
-                'error' => $errores,
+                'status' => 'failure',
+                'errors' => $errores,
             ])
         );
         return $response->withStatus(400);
     }
 
     $pdo = createConnection();
-    $sql = "SELECT * from tipo_propiedades
-        where nombre = :nombre";
+    $sql = "SELECT * FROM tipo_propiedades
+        WHERE nombre = :nombre";
 
     $query = $pdo->prepare($sql);
-    $query->bindValue('nombre', $nombre);
+    $query->bindValue(':nombre', $nombre);
     $query->execute();
 
     if ($query->rowCount() > 0) {
@@ -702,7 +702,7 @@ $app->post('/tipo_propiedades', function (
         return $response->withStatus(400);
     }
 
-    $sql = "INSERT into tipo_propiedades(nombre)
+    $sql = "INSERT INTO tipo_propiedades (nombre)
         values (:nombre)";
 
     $query = $pdo->prepare($sql);
@@ -744,8 +744,8 @@ $app->put('/tipo_propiedades/{id}', function (
         return $response->withStatus(400);
     }
     $pdo = createConnection();
-    $sql = "SELECT * from tipo_propiedades
-        where id = :id";
+    $sql = "SELECT * FROM tipo_propiedades
+        WHERE id = :id";
 
     $query = $pdo->prepare($sql);
     $query->bindValue(':id', $id);
@@ -777,8 +777,8 @@ $app->put('/tipo_propiedades/{id}', function (
     }
 
     $sql = "UPDATE tipo_propiedades
-        set nombre = :nombre
-        where id = :id";
+        SET nombre = :nombre
+        WHERE id = :id";
 
     $query = $pdo->prepare($sql);
     $query->bindValue(':nombre', $nombre);
@@ -795,20 +795,19 @@ $app->put('/tipo_propiedades/{id}', function (
     return $response->withStatus(200);
 });
 
-$app->delete('/tipo_propiedades', function (
+$app->delete('/tipo_propiedades/{id}', function (
     request $request,
     response $response,
     array $args
 ) {
-    $data = $request->getParsedBody();
     $id = $args['id'];
 
     $errores = obtenerErrores(
         ['id' => $id],
-        ['id' => v::notOptional()->intType()]
+        ['id' => v::notOptional()->regex('/^[0-9]+$/')]
     );
 
-    if (!isset($errores)) {
+    if (!empty($errores)) {
         $response->getBody()->write(
             json_encode([
                 'status' => 'failure',
@@ -819,8 +818,8 @@ $app->delete('/tipo_propiedades', function (
     }
 
     $pdo = createConnection();
-    $sql = "SELECT * from tipo_propiedades
-        where id = :id";
+    $sql = "SELECT * FROM tipo_propiedades
+        WHERE id = :id";
 
     $query = $pdo->prepare($sql);
     $query->bindValue(':id', $id);
@@ -836,8 +835,8 @@ $app->delete('/tipo_propiedades', function (
         return $response->withStatus(400);
     }
 
-    $sql = "DELETE * from tipo_propiedades
-        where id = :id";
+    $sql = "DELETE * FROM tipo_propiedades
+        WHERE id = :id";
 
     $query = $pdo->prepare($sql);
     $query->bindValue(':id', $id);
@@ -853,14 +852,14 @@ $app->delete('/tipo_propiedades', function (
 
 //inquilinos--------------------------------------------
 
-$app->get('/inquilonos', function (request $request, response $response) {
+$app->get('/inquilinos', function (Request $request, Response $response) {
     $pdo = createConnection();
 
-    $sql = 'SELECT * From inquilinos';
+    $sql = 'SELECT * FROM inquilinos';
     $query = $pdo->query($sql);
     $data = $query->fetchAll(PDO::FETCH_ASSOC);
     $payload = json_encode([
-        'status' => 'succes',
+        'status' => 'success',
         'data' => $data,
     ]);
 
@@ -868,7 +867,7 @@ $app->get('/inquilonos', function (request $request, response $response) {
     return $response->withStatus(200);
 });
 
-$app->post('/inquilinos', function (request $request, response $response) {
+$app->post('/inquilinos', function (Request $request, Response $response) {
     $data = $request->getParsedBody();
 
     $validaciones = [
@@ -895,8 +894,8 @@ $app->post('/inquilinos', function (request $request, response $response) {
     $documento = $data['documento'];
 
     $pdo = createConnection();
-    $sql = 'SELECT * from inquilinos 
-        where documento = :documento ';
+    $sql = 'SELECT * FROM inquilinos 
+        WHERE documento = :documento ';
 
     $query = $pdo->prepare($sql);
     $query->bindValue(':documento', $documento);
@@ -951,8 +950,8 @@ $app->post('/inquilinos', function (request $request, response $response) {
 });
 
 $app->put('/inquilinos/{id}', function (
-    request $request,
-    response $response,
+    Request $request,
+    Response $response,
     array $args
 ) {
     $data = array_intersect_key(
@@ -970,7 +969,7 @@ $app->put('/inquilinos/{id}', function (
         return $response->withStatus(400);
     }
 
-    $documento = $args['documento'] ?? null;
+    $documento = $data['documento'] ?? null;
     $id = $args['id'] ?? null;
 
     $verificacion = [
@@ -981,10 +980,7 @@ $app->put('/inquilinos/{id}', function (
         'activo' => v::notOptional()->boolType(),
     ];
 
-    $errores = obtenerErrores(
-        [...$data, 'id' => $id, 'documento' => $documento],
-        $verificacion
-    );
+    $errores = obtenerErrores([...$data, 'id' => $id], $verificacion);
 
     if (!empty($errores)) {
         //esta vacia?
@@ -1015,8 +1011,8 @@ $app->put('/inquilinos/{id}', function (
         return $response->withstatus(400);
     }
 
-    $sql = 'SELECT * from inquilinos
-        where documento = :documento';
+    $sql = 'SELECT * FROM inquilinos
+        WHERE documento = :documento';
 
     $query = $pdo->prepare($sql);
     $query->bindValue(':documento', $documento);
