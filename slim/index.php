@@ -11,7 +11,20 @@ require __DIR__ . '/vendor/autoload.php';
 $app = AppFactory::create();
 $app->addBodyParsingMiddleware();
 $app->addRoutingMiddleware();
-$app->addErrorMiddleware(true, true, true);
+
+$customErrorHandler = function (Request $request, Throwable $exception) use (
+    $app
+) {
+    $payload = ['status' => 'failure', 'error' => $exception->getMessage()];
+
+    $response = $app->getResponseFactory()->createResponse();
+    $response->getBody()->write(json_encode($payload, JSON_UNESCAPED_UNICODE));
+
+    return $response->withStatus(500);
+};
+
+$errorMiddleware = $app->addErrorMiddleware(true, true, true);
+$errorMiddleware->setDefaultErrorHandler($customErrorHandler);
 $app->add(function ($request, $handler) {
     $response = $handler->handle($request);
 
@@ -37,6 +50,7 @@ function obtenerErrores($inputs, $validaciones, $opcionales = false) {
         'boolType' => 'Este campo debe ser un booleano',
         'date' => 'Este campo debe ser una fecha en el formato 2024-04-12',
         'regex' => 'Este campo no está en el formato correcto',
+        'greaterThan' => 'Este campo debe ser una fecha próxima',
     ];
     $errores = [];
     if ($opcionales) {
@@ -76,23 +90,13 @@ function createConnection() {
 $app->get('/localidades', function (Request $request, Response $response) {
     $pdo = createConnection();
 
-    try {
-        $sql = 'SELECT * FROM localidades';
-        $query = $pdo->query($sql);
-        $results = $query->fetchAll(PDO::FETCH_ASSOC);
-        $data = ['status' => 'success', 'results' => $results];
+    $sql = 'SELECT * FROM localidades';
+    $query = $pdo->query($sql);
+    $results = $query->fetchAll(PDO::FETCH_ASSOC);
+    $data = ['status' => 'success', 'results' => $results];
 
-        $response->getBody()->write(json_encode($data));
-        return $response->withStatus(201);
-    } catch (\Exception $e) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'error' => $e->getMessage(),
-            ])
-        );
-        return $response->withStatus(500);
-    }
+    $response->getBody()->write(json_encode($data));
+    return $response->withStatus(201);
 });
 
 $app->post('/localidades', function (Request $request, Response $response) {
@@ -110,44 +114,34 @@ $app->post('/localidades', function (Request $request, Response $response) {
         return $response->withStatus(400);
     }
 
-    try {
-        $pdo = createConnection();
+    $pdo = createConnection();
 
-        $sql = 'SELECT * FROM localidades WHERE nombre = :nombre';
-        $query = $pdo->prepare($sql);
-        $query->bindValue(':nombre', $nombre);
-        $query->execute();
-        if ($query->rowCount() > 0) {
-            $response->getBody()->write(
-                json_encode([
-                    'status' => 'failure',
-                    'error' => 'Ya existe una localidad con ese nombre',
-                ])
-            );
-            return $response->withStatus(409);
-        }
-
-        $sql = 'INSERT INTO localidades (nombre) VALUES (:nombre)';
-        $query = $pdo->prepare($sql);
-        $query->bindValue(':nombre', $nombre);
-        $query->execute();
-
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'success',
-                'message' => 'Localidad creada',
-            ])
-        );
-        return $response->withStatus(201);
-    } catch (\Exception $e) {
+    $sql = 'SELECT * FROM localidades WHERE nombre = :nombre';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':nombre', $nombre);
+    $query->execute();
+    if ($query->rowCount() > 0) {
         $response->getBody()->write(
             json_encode([
                 'status' => 'failure',
-                'error' => $e->getMessage(),
+                'error' => 'Ya existe una localidad con ese nombre',
             ])
         );
-        return $response->withStatus(500);
+        return $response->withStatus(409);
     }
+
+    $sql = 'INSERT INTO localidades (nombre) VALUES (:nombre)';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':nombre', $nombre);
+    $query->execute();
+
+    $response->getBody()->write(
+        json_encode([
+            'status' => 'success',
+            'message' => 'Localidad creada',
+        ])
+    );
+    return $response->withStatus(201);
 });
 
 $app->put('/localidades/{id}', function (
@@ -178,60 +172,47 @@ $app->put('/localidades/{id}', function (
         return $response->withStatus(400);
     }
 
-    try {
-        $pdo = createConnection();
+    $pdo = createConnection();
 
-        $errores = [];
+    $errores = [];
 
-        $sql = 'SELECT * FROM localidades WHERE id = :id';
-        $query = $pdo->prepare($sql);
-        $query->bindParam(':id', $id);
-        $query->execute();
-        if ($query->rowCount() == 0) {
-            $errores['localidad_id'] =
-                'No existe una localidad con el ID provisto';
-        }
-
-        $sql = 'SELECT * FROM localidades WHERE nombre = :nombre AND id != :id';
-        $query = $pdo->prepare($sql);
-        $query->bindParam(':id', $id);
-        $query->bindParam(':nombre', $nombre);
-        $query->execute();
-        if ($query->rowCount() > 0) {
-            $errores['nombre'] = 'Ya existe una localidad con ese nombre';
-        }
-
-        if (!empty($errores)) {
-            $response
-                ->getBody()
-                ->write(
-                    json_encode(['status' => 'failure', 'errors' => $errores])
-                );
-            return $response->withStatus(400);
-        }
-
-        $sql = 'UPDATE localidades SET nombre = :nombre WHERE id = :id';
-        $query = $pdo->prepare($sql);
-        $query->bindParam(':id', $id);
-        $query->bindParam(':nombre', $nombre);
-        $query->execute();
-
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'success',
-                'message' => 'Localidad actualizada',
-            ])
-        );
-        return $response->withStatus(200);
-    } catch (\Exception $e) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'error' => $e->getMessage(),
-            ])
-        );
-        return $response->withStatus(500);
+    $sql = 'SELECT * FROM localidades WHERE id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindParam(':id', $id);
+    $query->execute();
+    if ($query->rowCount() == 0) {
+        $errores['localidad_id'] = 'No existe una localidad con el ID provisto';
     }
+
+    $sql = 'SELECT * FROM localidades WHERE nombre = :nombre AND id != :id';
+    $query = $pdo->prepare($sql);
+    $query->bindParam(':id', $id);
+    $query->bindParam(':nombre', $nombre);
+    $query->execute();
+    if ($query->rowCount() > 0) {
+        $errores['nombre'] = 'Ya existe una localidad con ese nombre';
+    }
+
+    if (!empty($errores)) {
+        $response
+            ->getBody()
+            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
+        return $response->withStatus(400);
+    }
+
+    $sql = 'UPDATE localidades SET nombre = :nombre WHERE id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindParam(':id', $id);
+    $query->bindParam(':nombre', $nombre);
+    $query->execute();
+
+    $response->getBody()->write(
+        json_encode([
+            'status' => 'success',
+            'message' => 'Localidad actualizada',
+        ])
+    );
+    return $response->withStatus(200);
 });
 
 $app->delete('/localidades/{id}', function (
@@ -251,65 +232,45 @@ $app->delete('/localidades/{id}', function (
         return $response->withStatus(400);
     }
 
-    try {
-        $pdo = createConnection();
+    $pdo = createConnection();
 
-        $sql = 'SELECT * FROM localidades WHERE id = :id';
-        $query = $pdo->prepare($sql);
-        $query->bindParam(':id', $id);
-        $query->execute();
-        if ($query->rowCount() == 0) {
-            $response->getBody()->write(
-                json_encode([
-                    'status' => 'failure',
-                    'error' => 'No existe una localidad con el ID provisto',
-                ])
-            );
-            return $response->withStatus(400);
-        }
-
-        $sql = 'DELETE FROM localidades WHERE id = :id';
-        $query = $pdo->prepare($sql);
-        $query->bindValue(':id', $id);
-        $query->execute();
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'success',
-                'message' => 'Localidad borrada',
-            ])
-        );
-        return $response->withStatus(200);
-    } catch (\Exception $e) {
+    $sql = 'SELECT * FROM localidades WHERE id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindParam(':id', $id);
+    $query->execute();
+    if ($query->rowCount() == 0) {
         $response->getBody()->write(
             json_encode([
                 'status' => 'failure',
-                'error' => $e->getMessage(),
+                'error' => 'No existe una localidad con el ID provisto',
             ])
         );
-        return $response->withStatus(500);
+        return $response->withStatus(400);
     }
+
+    $sql = 'DELETE FROM localidades WHERE id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':id', $id);
+    $query->execute();
+    $response->getBody()->write(
+        json_encode([
+            'status' => 'success',
+            'message' => 'Localidad borrada',
+        ])
+    );
+    return $response->withStatus(200);
 });
 
 $app->get('/propiedades', function (Request $request, Response $response) {
     $pdo = createConnection();
 
-    try {
-        $sql = 'SELECT * FROM propiedades';
-        $query = $pdo->query($sql);
-        $results = $query->fetchAll(PDO::FETCH_ASSOC);
-        $data = ['status' => 'success', 'results' => $results];
+    $sql = 'SELECT * FROM propiedades';
+    $query = $pdo->query($sql);
+    $results = $query->fetchAll(PDO::FETCH_ASSOC);
+    $data = ['status' => 'success', 'results' => $results];
 
-        $response->getBody()->write(json_encode($data));
-        return $response->withStatus(201);
-    } catch (\Exception $e) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'error' => $e->getMessage(),
-            ])
-        );
-        return $response->withStatus(500);
-    }
+    $response->getBody()->write(json_encode($data));
+    return $response->withStatus(201);
 });
 
 $app->post('/propiedades', function (Request $request, Response $response) {
@@ -357,81 +318,68 @@ $app->post('/propiedades', function (Request $request, Response $response) {
         return $response->withStatus(400);
     }
 
-    try {
-        $pdo = createConnection();
+    $pdo = createConnection();
 
-        $errores = [];
+    $errores = [];
 
-        $localidadId = $data['localidad_id'];
-        $sql = 'SELECT * FROM localidades WHERE id = :id';
-        $query = $pdo->prepare($sql);
-        $query->bindValue(':id', $localidadId);
-        $query->execute();
-        if ($query->rowCount() == 0) {
-            $errores['localidad_id'] =
-                'No existe una localidad con el ID provisto';
-        }
-
-        $tipoPropiedadId = $data['tipo_propiedad_id'];
-        $sql = 'SELECT * FROM tipo_propiedades WHERE id = :id';
-        $query = $pdo->prepare($sql);
-        $query->bindValue(':id', $tipoPropiedadId);
-        $query->execute();
-        if ($query->rowCount() == 0) {
-            $errores['tipo_propiedad_id'] =
-                'No existe una tipo de propiedad con el ID provisto';
-        }
-
-        if (!empty($errores)) {
-            $response
-                ->getBody()
-                ->write(
-                    json_encode(['status' => 'failure', 'errors' => $errores])
-                );
-            return $response->withStatus(400);
-        }
-
-        $stringCampos = '';
-        $stringValores = '';
-        $i = 0;
-        foreach ($data as $key => $value) {
-            $stringCampos .= $key;
-            if (is_bool($value)) {
-                $stringValores .= $value ? 'true' : 'false';
-            } elseif (is_string($value)) {
-                $stringValores .= '"' . $value . '"';
-            } else {
-                $stringValores .= $value;
-            }
-            if ($i < count($data) - 1) {
-                $stringCampos .= ', ';
-                $stringValores .= ', ';
-            }
-            $i++;
-        }
-        $sql =
-            'INSERT INTO propiedades (' .
-            $stringCampos .
-            ') VALUES (' .
-            $stringValores .
-            ')';
-        $query = $pdo->query($sql);
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'success',
-                'message' => 'Propiedad creada',
-            ])
-        );
-        return $response->withStatus(201);
-    } catch (\Exception $e) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'error' => $e->getMessage(),
-            ])
-        );
-        return $response->withStatus(500);
+    $localidadId = $data['localidad_id'];
+    $sql = 'SELECT * FROM localidades WHERE id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':id', $localidadId);
+    $query->execute();
+    if ($query->rowCount() == 0) {
+        $errores['localidad_id'] = 'No existe una localidad con el ID provisto';
     }
+
+    $tipoPropiedadId = $data['tipo_propiedad_id'];
+    $sql = 'SELECT * FROM tipo_propiedades WHERE id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':id', $tipoPropiedadId);
+    $query->execute();
+    if ($query->rowCount() == 0) {
+        $errores['tipo_propiedad_id'] =
+            'No existe una tipo de propiedad con el ID provisto';
+    }
+
+    if (!empty($errores)) {
+        $response
+            ->getBody()
+            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
+        return $response->withStatus(400);
+    }
+
+    $stringCampos = '';
+    $stringValores = '';
+    $i = 0;
+    foreach ($data as $key => $value) {
+        $stringCampos .= $key;
+        if (is_bool($value)) {
+            $stringValores .= $value ? 'true' : 'false';
+        } elseif (is_string($value)) {
+            $stringValores .= '"' . $value . '"';
+        } else {
+            $stringValores .= $value;
+        }
+        if ($i < count($data) - 1) {
+            $stringCampos .= ', ';
+            $stringValores .= ', ';
+        }
+        $i++;
+    }
+    $sql =
+        'INSERT INTO propiedades (' .
+        $stringCampos .
+        ') VALUES (' .
+        $stringValores .
+        ')';
+    $query = $pdo->query($sql);
+    $response->getBody()->write(
+        json_encode([
+            'status' => 'success',
+            'message' => 'Propiedad creada',
+        ])
+    );
+    return $response->withStatus(201);
 });
 
 $app->put('/propiedades/{id}', function (
@@ -493,77 +441,63 @@ $app->put('/propiedades/{id}', function (
         return $response->withStatus(400);
     }
 
-    try {
-        $pdo = createConnection();
+    $pdo = createConnection();
 
-        $errores = [];
-        if (isset($data['localidad_id'])) {
-            $localidadId = $data['localidad_id'];
-            $sql = 'SELECT FROM localidades WHERE id = :id';
-            $query = $pdo->prepare($sql);
-            $query->bindValue(':id', $localidadId);
-            if ($query->rowCount() != 1) {
-                $errores['localidad_id'] =
-                    'No existe una localidad con el ID provisto';
-            }
-        }
-        if (isset($data['tipo_propiedad_id'])) {
-            $tipoPropiedadId = $data['tipo_propiedad_id'];
-            $sql = 'SELECT FROM tipo_propiedades WHERE id = :id';
-            $query = $pdo->prepare($sql);
-            $query->bindValue(':id', $tipoPropiedadId);
-            if ($query->rowCount() != 1) {
-                $errores['propiedad_id'];
-            }
-        }
-        if (!empty($errores)) {
-            $response
-                ->getBody()
-                ->write(
-                    json_encode(['status' => 'failure', 'errors' => $errores])
-                );
-            return $response->withStatus(400);
-        }
-
-        $stringActualizaciones = '';
-        $i = 0;
-        foreach ($data as $key => $value) {
-            $stringActualizaciones .= $key . ' = ';
-            if (is_bool($value)) {
-                $stringActualizaciones .= $value ? 'true' : 'false';
-            } elseif (is_string($value)) {
-                $stringActualizaciones .= '"' . $value . '"';
-            } else {
-                $stringActualizaciones .= $value;
-            }
-            if ($i < count($data) - 1) {
-                $stringActualizaciones .= ', ';
-            }
-            $i++;
-        }
-        $sql =
-            'UPDATE propiedades SET ' .
-            $stringActualizaciones .
-            ' WHERE id = :id';
+    $errores = [];
+    if (isset($data['localidad_id'])) {
+        $localidadId = $data['localidad_id'];
+        $sql = 'SELECT FROM localidades WHERE id = :id';
         $query = $pdo->prepare($sql);
-        $query->bindValue(':id', $id);
-        $query->execute();
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'success',
-                'message' => 'Propiedad actualizada',
-            ])
-        );
-        return $response->withStatus(200);
-    } catch (\Exception $e) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'error' => $e->getMessage(),
-            ])
-        );
-        return $response->withStatus(500);
+        $query->bindValue(':id', $localidadId);
+        if ($query->rowCount() != 1) {
+            $errores['localidad_id'] =
+                'No existe una localidad con el ID provisto';
+        }
     }
+    if (isset($data['tipo_propiedad_id'])) {
+        $tipoPropiedadId = $data['tipo_propiedad_id'];
+        $sql = 'SELECT FROM tipo_propiedades WHERE id = :id';
+        $query = $pdo->prepare($sql);
+        $query->bindValue(':id', $tipoPropiedadId);
+        if ($query->rowCount() != 1) {
+            $errores['propiedad_id'];
+        }
+    }
+    if (!empty($errores)) {
+        $response
+            ->getBody()
+            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
+        return $response->withStatus(400);
+    }
+
+    $stringActualizaciones = '';
+    $i = 0;
+    foreach ($data as $key => $value) {
+        $stringActualizaciones .= $key . ' = ';
+        if (is_bool($value)) {
+            $stringActualizaciones .= $value ? 'true' : 'false';
+        } elseif (is_string($value)) {
+            $stringActualizaciones .= '"' . $value . '"';
+        } else {
+            $stringActualizaciones .= $value;
+        }
+        if ($i < count($data) - 1) {
+            $stringActualizaciones .= ', ';
+        }
+        $i++;
+    }
+    $sql =
+        'UPDATE propiedades SET ' . $stringActualizaciones . ' WHERE id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':id', $id);
+    $query->execute();
+    $response->getBody()->write(
+        json_encode([
+            'status' => 'success',
+            'message' => 'Propiedad actualizada',
+        ])
+    );
+    return $response->withStatus(200);
 });
 
 $app->delete('/propiedades/{id}', function (
@@ -582,64 +516,44 @@ $app->delete('/propiedades/{id}', function (
             ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
         return $response->withStatus(400);
     }
-    try {
-        $pdo = createConnection();
+    $pdo = createConnection();
 
-        $sql = 'SELECT * FROM propiedades WHERE id = :id';
-        $query = $pdo->prepare($sql);
-        $query->bindValue(':id', $id);
-        $query->execute();
-        if ($query->rowCount() == 0) {
-            $response->getBody()->write(
-                json_encode([
-                    'status' => 'failure',
-                    'error' => 'No existe una propiedad con el ID provisto',
-                ])
-            );
-            return $response;
-        }
-
-        $sql = 'DELETE FROM propiedades WHERE id = :id';
-        $query = $pdo->prepare($sql);
-        $query->bindValue(':id', $id);
-        $query->execute();
+    $sql = 'SELECT * FROM propiedades WHERE id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':id', $id);
+    $query->execute();
+    if ($query->rowCount() == 0) {
         $response->getBody()->write(
             json_encode([
-                'status' => 'success',
-                'message' => 'Propiedad borrada',
+                'status' => 'failure',
+                'error' => 'No existe una propiedad con el ID provisto',
             ])
         );
         return $response;
-    } catch (\Exception $e) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'error' => $e->getMessage(),
-            ])
-        );
-        return $response->withStatus(500);
     }
+
+    $sql = 'DELETE FROM propiedades WHERE id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':id', $id);
+    $query->execute();
+    $response->getBody()->write(
+        json_encode([
+            'status' => 'success',
+            'message' => 'Propiedad borrada',
+        ])
+    );
+    return $response;
 });
 
 $app->get('/reservas', function (Request $request, Response $response) {
-    try {
-        $pdo = createConnection();
-        $sql = 'SELECT * FROM reservas';
-        $query = $pdo->query($sql);
-        $results = $query->fetchAll(PDO::FETCH_ASSOC);
-        $data = ['status' => 'success', 'results' => $results];
+    $pdo = createConnection();
+    $sql = 'SELECT * FROM reservas';
+    $query = $pdo->query($sql);
+    $results = $query->fetchAll(PDO::FETCH_ASSOC);
+    $data = ['status' => 'success', 'results' => $results];
 
-        $response->getBody()->write(json_encode($data));
-        return $response->withStatus(200);
-    } catch (\Exception $e) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'error' => $e->getMessage(),
-            ])
-        );
-        return $response->withStatus(500);
-    }
+    $response->getBody()->write(json_encode($data));
+    return $response->withStatus(200);
 });
 
 $app->post('/reservas', function (Request $request, Response $response) {
@@ -673,73 +587,59 @@ $app->post('/reservas', function (Request $request, Response $response) {
     $fechaDesde = $data['fecha_desde'];
     $cantidadNoches = $data['cantidad_noches'];
 
-    try {
-        $pdo = createConnection();
+    $pdo = createConnection();
 
-        $errores = [];
+    $errores = [];
 
-        $sql = 'SELECT * FROM inquilinos WHERE id = :id';
-        $query = $pdo->prepare($sql);
-        $query->bindValue(':id', $inquilinoId);
-        $query->execute();
-        if ($query->rowCount() == 0) {
-            $errores['inquilino_id'] =
-                'No existe un inquilino con el ID provisto';
-        } else {
-            $inquilino = $query->fetch(PDO::FETCH_ASSOC);
-            if (!$inquilino['activo']) {
-                $errores['inquilino'] =
-                    'No se puede crear la reserva porque el inquilino no está activo';
-            }
+    $sql = 'SELECT * FROM inquilinos WHERE id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':id', $inquilinoId);
+    $query->execute();
+    if ($query->rowCount() == 0) {
+        $errores['inquilino_id'] = 'No existe un inquilino con el ID provisto';
+    } else {
+        $inquilino = $query->fetch(PDO::FETCH_ASSOC);
+        if (!$inquilino['activo']) {
+            $errores['inquilino'] =
+                'No se puede crear la reserva porque el inquilino no está activo';
         }
-
-        $sql = 'SELECT * FROM propiedades WHERE id = :id';
-        $query = $pdo->prepare($sql);
-        $query->bindValue(':id', $propiedadId);
-        $query->execute();
-        if ($query->rowCount() == 0) {
-            $errores['propiedad_id'] =
-                'No existe una propiedad con el ID provisto';
-        }
-
-        if (!empty($errores)) {
-            $response
-                ->getBody()
-                ->write(
-                    json_encode(['status' => 'failure', 'errors' => $errores])
-                );
-            return $response->withStatus(400);
-        }
-
-        $propiedad = $query->fetch(PDO::FETCH_ASSOC);
-        $valorTotal = $propiedad['valor_noche'] * $cantidadNoches;
-
-        $sql = 'INSERT INTO reservas (propiedad_id, inquilino_id, fecha_desde, cantidad_noches, valor_total) 
-            VALUES (:propiedad_id, :inquilino_id, :fecha_desde, :cantidad_noches, :valor_total)';
-        $query = $pdo->prepare($sql);
-        $query->bindValue(':propiedad_id', $propiedadId, PDO::PARAM_INT);
-        $query->bindValue(':inquilino_id', $inquilinoId, PDO::PARAM_INT);
-        $query->bindValue(':fecha_desde', $fechaDesde, PDO::PARAM_STR);
-        $query->bindValue(':cantidad_noches', $cantidadNoches, PDO::PARAM_INT);
-        $query->bindValue(':valor_total', $valorTotal, PDO::PARAM_INT);
-        $query->execute();
-
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'success',
-                'message' => 'Reserva creada',
-            ])
-        );
-        return $response;
-    } catch (\Exception $e) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'error' => $e->getMessage(),
-            ])
-        );
-        return $response->withStatus(500);
     }
+
+    $sql = 'SELECT * FROM propiedades WHERE id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':id', $propiedadId);
+    $query->execute();
+    if ($query->rowCount() == 0) {
+        $errores['propiedad_id'] = 'No existe una propiedad con el ID provisto';
+    }
+
+    if (!empty($errores)) {
+        $response
+            ->getBody()
+            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
+        return $response->withStatus(400);
+    }
+
+    $propiedad = $query->fetch(PDO::FETCH_ASSOC);
+    $valorTotal = $propiedad['valor_noche'] * $cantidadNoches;
+
+    $sql = 'INSERT INTO reservas (propiedad_id, inquilino_id, fecha_desde, cantidad_noches, valor_total) 
+            VALUES (:propiedad_id, :inquilino_id, :fecha_desde, :cantidad_noches, :valor_total)';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':propiedad_id', $propiedadId, PDO::PARAM_INT);
+    $query->bindValue(':inquilino_id', $inquilinoId, PDO::PARAM_INT);
+    $query->bindValue(':fecha_desde', $fechaDesde, PDO::PARAM_STR);
+    $query->bindValue(':cantidad_noches', $cantidadNoches, PDO::PARAM_INT);
+    $query->bindValue(':valor_total', $valorTotal, PDO::PARAM_INT);
+    $query->execute();
+
+    $response->getBody()->write(
+        json_encode([
+            'status' => 'success',
+            'message' => 'Reserva creada',
+        ])
+    );
+    return $response;
 });
 
 $app->run();
