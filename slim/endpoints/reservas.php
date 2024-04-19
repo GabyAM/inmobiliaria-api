@@ -4,6 +4,8 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Respect\Validation\Validator as v;
 
+require_once __DIR__ . '/../utilidades/strings_sql.php';
+
 $app->get('/reservas', function (Request $request, Response $response) {
     $pdo = createConnection();
     $sql = 'SELECT * FROM reservas';
@@ -209,22 +211,7 @@ $app->put('/reservas/{id}', function (
         $valorNoche = $propiedad['valor_noche'];
         $data['valor_total'] = $cantidadNoches * $valorNoche;
     }
-    $stringActualizaciones = '';
-    $i = 0;
-    foreach ($data as $key => $value) {
-        $stringActualizaciones .= $key . ' = ';
-        if (is_bool($value)) {
-            $stringActualizaciones .= $value ? 'true' : 'false';
-        } elseif (is_string($value)) {
-            $stringActualizaciones .= '"' . $value . '"';
-        } else {
-            $stringActualizaciones .= $value;
-        }
-        if ($i < count($data) - 1) {
-            $stringActualizaciones .= ', ';
-        }
-        $i++;
-    }
+    $stringActualizaciones = construirStringActualizaciones($data);
     $sql = 'UPDATE reservas SET ' . $stringActualizaciones . ' WHERE id = :id';
     $query = $pdo->prepare($sql);
     $query->bindParam(':id', $id);

@@ -4,6 +4,8 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Respect\Validation\Validator as v;
 
+require_once __DIR__ . '/../utilidades/strings_sql.php';
+
 $app->get('/inquilinos', function (Request $request, Response $response) {
     $pdo = createConnection();
 
@@ -62,32 +64,9 @@ $app->post('/inquilinos', function (Request $request, Response $response) {
         return $response;
     }
 
-    $stringCampos = '';
-    $stringValores = '';
-    $i = 0;
-    foreach ($data as $key => $value) {
-        $stringCampos .= $key;
-        if (is_bool($value)) {
-            $stringValores .= $value ? 'true' : 'false';
-        } elseif (is_string($value)) {
-            $stringValores .= '"' . $value . '"';
-        } else {
-            $stringValores .= $value;
-        }
-        if ($i < count($data) - 1) {
-            $stringCampos .= ', ';
-            $stringValores .= ', ';
-            $i++;
-        }
-    }
+    $stringInserciones = construirStringInserciones($data);
 
-    $sql =
-        'INSERT into inquilinos (' .
-        $stringCampos .
-        ')
-        values (' .
-        $stringValores .
-        ')';
+    $sql = 'INSERT into inquilinos (' . $stringInserciones;
 
     $pdo->query($sql);
 
@@ -182,22 +161,7 @@ $app->put('/inquilinos/{id}', function (
         }
     }
 
-    $stringActualizaciones = '';
-    $i = 0;
-    foreach ($data as $key => $value) {
-        $stringActualizaciones .= $key . ' = ';
-        if (is_bool($value)) {
-            $stringActualizaciones .= $value ? 'true' : 'false';
-        } elseif (is_string($value)) {
-            $stringActualizaciones .= '"' . $value . '"';
-        } else {
-            $stringActualizaciones .= $value;
-        }
-        if ($i < count($data) - 1) {
-            $stringActualizaciones .= ', ';
-            $i++;
-        }
-    }
+    $stringActualizaciones = construirStringActualizaciones($data);
     $sql =
         'UPDATE inquilinos SET ' . $stringActualizaciones . ' WHERE id = :id';
     $query = $pdo->prepare($sql);
