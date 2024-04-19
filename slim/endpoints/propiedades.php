@@ -65,8 +65,6 @@ $app->post('/propiedades', function (Request $request, Response $response) {
 
     $pdo = createConnection();
 
-    $errores = [];
-
     $localidadId = $data['localidad_id'];
     $sql = 'SELECT * FROM localidades WHERE id = :id';
     $query = $pdo->prepare($sql);
@@ -166,7 +164,6 @@ $app->put('/propiedades/{id}', function (
 
     $pdo = createConnection();
 
-    $errores = [];
     if (isset($data['localidad_id'])) {
         $localidadId = $data['localidad_id'];
         $sql = 'SELECT FROM localidades WHERE id = :id';
@@ -257,27 +254,23 @@ $app->delete('/propiedades/{id}', function (
     $query->bindValue(':id', $id);
     $query->execute();
     if ($query->rowCount() > 0) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'error' =>
-                    'No se puede eliminar la propiedad porque una reserva la está usando',
-            ])
-        );
-        return $response->withStatus(400);
+        $errores['propiedad'] =
+            'No se puede eliminar la propiedad porque una reserva la está usando';
+        //no es el mejor nombre
     }
     $sql = 'SELECT * FROM propiedades WHERE id = :id';
     $query = $pdo->prepare($sql);
     $query->bindValue(':id', $id);
     $query->execute();
     if ($query->rowCount() == 0) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'error' => 'No existe una propiedad con el ID provisto',
-            ])
-        );
-        return $response;
+        $errores['id'] = 'No existe una propiedad con el ID provisto';
+    }
+
+    if (!empty($errores)) {
+        $response
+            ->getBody()
+            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
+        return $response->withStatus(400);
     }
 
     $sql = 'DELETE FROM propiedades WHERE id = :id';

@@ -90,7 +90,7 @@ $app->put('/inquilinos/{id}', function (
         array_flip(['id', 'documento', 'apellido', 'nombre', 'email', 'activo'])
     );
 
-    if (empty($data)) {
+    if (!empty($data)) {
         $response->getBody()->write(
             json_encode([
                 'status' => 'failure',
@@ -118,28 +118,22 @@ $app->put('/inquilinos/{id}', function (
         $response->getBody()->write(
             json_encode([
                 'status' => 'failure',
-                'message' => $errores,
+                'errors' => $errores,
             ])
         );
         return $response->withStatus(400);
     }
 
     $pdo = createConnection();
-    $sql = 'SELECT * From inquilinos
-        where id = :id';
+
+    $sql = 'SELECT * From inquilinos WHERE id = :id';
 
     $query = $pdo->prepare($sql);
     $query->bindValue(':id', $id);
     $query->execute();
 
     if ($query->rowCount() == 0) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'error' => 'no existe nignun inquilino con la id provista',
-            ])
-        );
-        return $response->withstatus(400);
+        $errores['id'] = 'No existe un inquilino con la ID provista';
     }
 
     if (isset($data['documento'])) {
@@ -151,14 +145,18 @@ $app->put('/inquilinos/{id}', function (
         $query->execute();
 
         if ($query->rowCount() > 0) {
-            $response->getBody()->write(
-                json_encode([
-                    'status' => 'failure',
-                    'error' => 'No se puede repetir el documento',
-                ])
-            );
-            return $response->withStatus(400);
+            $errores['documento'] = 'No se puede repetir el documento';
         }
+    }
+
+    if (!empty($errores)) {
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'failure',
+                'errors' => $errores,
+            ])
+        );
+        return $response->withStatus(400);
     }
 
     $stringActualizaciones = construirStringActualizaciones($data);

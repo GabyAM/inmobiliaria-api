@@ -91,8 +91,6 @@ $app->put('/localidades/{id}', function (
 
     $pdo = createConnection();
 
-    $errores = [];
-
     $sql = 'SELECT * FROM localidades WHERE id = :id';
     $query = $pdo->prepare($sql);
     $query->bindParam(':id', $id);

@@ -50,8 +50,6 @@ $app->post('/reservas', function (Request $request, Response $response) {
 
     $pdo = createConnection();
 
-    $errores = [];
-
     $sql = 'SELECT * FROM inquilinos WHERE id = :id';
     $query = $pdo->prepare($sql);
     $query->bindValue(':id', $inquilinoId);
@@ -146,8 +144,6 @@ $app->put('/reservas/{id}', function (
     }
 
     $pdo = createConnection();
-
-    $errores = [];
 
     $sql = 'SELECT * FROM reservas WHERE id = :id';
     $query = $pdo->prepare($sql);
