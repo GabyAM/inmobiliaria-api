@@ -29,7 +29,7 @@ function construirStringInserciones($valores): string {
         if (is_bool($value)) {
             $stringValores .= $value ? 'true' : 'false';
         } elseif (is_string($value)) {
-            $stringValores .= '"' . $value . '"w';
+            $stringValores .= '"'.$value.'"';
         } else {
             $stringValores .= $value;
         }

@@ -5,7 +5,7 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use Respect\Validation\Validator as v;
 
 require_once __DIR__ . '/../utilidades/strings_sql.php';
-
+//listar
 $app->get('/inquilinos', function (Request $request, Response $response) {
     $pdo = createConnection();
 
@@ -18,6 +18,46 @@ $app->get('/inquilinos', function (Request $request, Response $response) {
     ]);
 
     $response->getBody()->write($payload);
+    return $response->withStatus(200);
+});
+//ver inquilino
+$app->get('/inquilinos/{id}', function(Request $resquest, Response $response, array $args){
+    $id = $args['id'];
+    $errores = obtenerErrores(
+        ['id'=>$id],
+        ['id'=>v::notOptional()->regex('/^[0-9]+$/')]
+    );
+
+    if(!empty($errores)){
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'failure',
+                'error' => $errores
+            ])
+        );
+        return $response->withStatus(400);
+    }
+    $pdo = createConnection();
+    $sql = ('SELECT * FROM inquilinos WHERE id = :id');
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':id', $id);
+    $query->execute();
+
+    if($query->rowCount() == 0){
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'failure',
+                'message' => 'no se encontro ningun inquilino con el ID provisto',
+            ])
+        );
+        return $response->withStatus(400);
+    }
+    $response->getBody()->write(
+        json_encode([
+            'status'=> 'success',
+            'data'=> $query->fetchAll(PDO::FETCH_ASSOC)
+        ])
+    );
     return $response->withStatus(200);
 });
 
@@ -61,19 +101,19 @@ $app->post('/inquilinos', function (Request $request, Response $response) {
                 'message' => 'no se puede repetir el Documento',
             ])
         );
-        return $response;
+        return $response->withStatus(400);
     }
 
     $stringInserciones = construirStringInserciones($data);
 
-    $sql = 'INSERT into inquilinos (' . $stringInserciones;
+    $sql = 'INSERT INTO inquilinos' . $stringInserciones;
 
-    $pdo->query($sql);
+    $query = $pdo->query($sql);
 
     $response->getBody()->write(
         json_encode([
             'status' => 'success',
-            'message' => 'propiedad creada',
+            'message' => 'inquilino creada',
         ])
     );
 
@@ -173,5 +213,53 @@ $app->put('/inquilinos/{id}', function (
         ])
     );
 
+    return $response->withStatus(200);
+});
+
+$app->delete('/inquilinos/{id}', function(Request $request, Response $response, array $args){
+    $id = $args['id'];
+
+    $errores = obtenerErrores(
+        ['id'=>$id],
+        ['id'=>v::notOptional()->regex('/^[0-9]+$/')]
+    );
+
+    if (!empty($errores)){
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'failure',
+                'errors' => $errores,
+            ])
+        );
+        return $response->withStatus(400);
+    }
+    $pdo = createConnection();
+    $sql = 'SELECT * FROM inquilinos WHERE id = :id';
+
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':id', $id);
+    $query->execute();
+
+    if($query->rowCount() == 0){
+        $response->getBody()->write(
+            json_encode([
+                'status'=>'failure',
+                'message'=>'no existe un inquilino con el ID provisto'
+            ])
+        );
+        return $response->withStatus(400);
+    }
+
+    $sql = 'DELETE FROM inquilinos WHERE id = :id';
+
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':id',$id);
+    $query->execute();
+    $response->getBody()->write(
+        json_encode([
+            'status'=>'success',
+            'message'=>'se elimino el inquilino'
+        ])
+    );
     return $response->withStatus(200);
 });
