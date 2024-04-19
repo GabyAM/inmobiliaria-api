@@ -1130,13 +1130,14 @@ $app->post('/inquilinos', function (Request $request, Response $response) {
     $query->bindValue(':documento', $documento);
     $query->execute();
 
-    if ($query > 0) {
+    if ($query->rowCount() > 0) {
         $response->getBody()->write(
             json_encode([
                 'status' => 'failure',
                 'message' => 'no se puede repetir el Documento',
             ])
         );
+        return $response;
     }
 
     $stringCampos = '';
@@ -1248,12 +1249,11 @@ $app->put('/inquilinos/{id}', function (
         $query->bindValue(':documento', $documento);
         $query->execute();
 
-        if ($query->rowCount() == 0) {
+        if ($query->rowCount() > 0) {
             $response->getBody()->write(
                 json_encode([
                     'status' => 'failure',
-                    'error' =>
-                        'no existe ningun inquilino con el documento provisto',
+                    'error' => 'No se puede repetir el documento',
                 ])
             );
             return $response->withStatus(400);
