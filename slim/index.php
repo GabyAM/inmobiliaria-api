@@ -873,11 +873,10 @@ $app->post('/inquilinos', function (Request $request, Response $response) {
     $data = $request->getParsedBody();
 
     $validaciones = [
-        'id' => v::notOptional()->intType(),
         'documento' => v::notoptional()->stringType()->length(null, 20),
         'apellido' => v::notOptional()->stringType()->length(null, 15),
         'nombre' => v::notOptional()->stringType()->length(null, 25),
-        'email' => v::notOptional()->stringType()->length(null, 20),
+        'email' => v::notOptional()->email()->length(null, 20),
         'activo' => v::notOptional()->boolType(),
     ];
 
@@ -943,7 +942,7 @@ $app->post('/inquilinos', function (Request $request, Response $response) {
 
     $response->getBody()->write(
         json_encode([
-            'status' => 'succes',
+            'status' => 'success',
             'message' => 'propiedad creada',
         ])
     );
@@ -971,18 +970,18 @@ $app->put('/inquilinos/{id}', function (
         return $response->withStatus(400);
     }
 
-    $documento = $data['documento'] ?? null;
     $id = $args['id'] ?? null;
 
     $verificacion = [
-        'id' => v::notOptional()->intType(),
-        'documento' => v::notOptional()->stringType(),
-        'nombre' => v::notOptional()->stringType(),
-        'email' => v::notOptional()->stringType(),
-        'activo' => v::notOptional()->boolType(),
+        'id' => v::regex('/^[0-9]+$/'),
+        'documento' => v::stringType()->length(null, 20),
+        'apellido' => v::stringType()->length(null, 15),
+        'nombre' => v::stringType()->length(null, 25),
+        'email' => v::email()->length(null, 20),
+        'activo' => v::boolType(),
     ];
 
-    $errores = obtenerErrores([...$data, 'id' => $id], $verificacion);
+    $errores = obtenerErrores([...$data, 'id' => $id], $verificacion, true);
 
     if (!empty($errores)) {
         //esta vacia?
@@ -1013,21 +1012,24 @@ $app->put('/inquilinos/{id}', function (
         return $response->withstatus(400);
     }
 
-    $sql = 'SELECT * FROM inquilinos
-        WHERE documento = :documento';
+    if (isset($data['documento'])) {
+        $documento = $data['documento'];
+        $sql = 'SELECT * FROM inquilinos WHERE documento = :documento';
 
-    $query = $pdo->prepare($sql);
-    $query->bindValue(':documento', $documento);
-    $query->execute();
+        $query = $pdo->prepare($sql);
+        $query->bindValue(':documento', $documento);
+        $query->execute();
 
-    if ($query->rowCount() == 0) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'error' => 'no existe ningun el documento provisto',
-            ])
-        );
-        return $response->withStatus(400);
+        if ($query->rowCount() == 0) {
+            $response->getBody()->write(
+                json_encode([
+                    'status' => 'failure',
+                    'error' =>
+                        'no existe ningun inquilino con el documento provisto',
+                ])
+            );
+            return $response->withStatus(400);
+        }
     }
 
     $stringActualizaciones = '';
@@ -1046,19 +1048,16 @@ $app->put('/inquilinos/{id}', function (
             $i++;
         }
     }
-    $sql = "UPDATE propiedades 
-            SET ' .$stringActualizaciones .' 
-            WHERE id = :id and documento = :documento";
-
+    $sql =
+        'UPDATE inquilinos SET ' . $stringActualizaciones . ' WHERE id = :id';
     $query = $pdo->prepare($sql);
     $query->bindValue(':id', $id);
-    $query->bindValue(':documento', $documento);
     $query->execute();
 
     $response->getBody()->write(
         json_encode([
             'status' => 'success',
-            'message' => 'se actualizo los inquilinos',
+            'message' => 'se actualizo el inquilino',
         ])
     );
 
