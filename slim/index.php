@@ -248,6 +248,21 @@ $app->delete('/localidades/{id}', function (
         return $response->withStatus(400);
     }
 
+    $sql = 'SELECT * FROM propiedades WHERE localidad_id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':id', $id);
+    $query->execute();
+    if ($query->rowCount() > 0) {
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'failure',
+                'error' =>
+                    'No se puede eliminar la localidad porque una propiedad la está usando',
+            ])
+        );
+        return $response->withStatus(400);
+    }
+
     $sql = 'DELETE FROM localidades WHERE id = :id';
     $query = $pdo->prepare($sql);
     $query->bindValue(':id', $id);
@@ -518,6 +533,20 @@ $app->delete('/propiedades/{id}', function (
     }
     $pdo = createConnection();
 
+    $sql = 'SELECT * FROM reservas WHERE id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':id', $id);
+    $query->execute();
+    if ($query->rowCount() > 0) {
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'failure',
+                'error' =>
+                    'No se puede eliminar la propiedad porque una reserva la está usando',
+            ])
+        );
+        return $response->withStatus(400);
+    }
     $sql = 'SELECT * FROM propiedades WHERE id = :id';
     $query = $pdo->prepare($sql);
     $query->bindValue(':id', $id);
@@ -976,6 +1005,20 @@ $app->delete('/tipo_propiedades/{id}', function (
         return $response->withStatus(400);
     }
 
+    $sql = 'SELECT * FROM propiedades WHERE tipo_propiedad_id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':id', $id);
+    $query->execute();
+    if ($query->rowCount() > 0) {
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'failure',
+                'message' =>
+                    'No se puede eliminar el tipo de propiedad porque una propiedad lo está usando',
+            ])
+        );
+        return $response->withStatus(400);
+    }
     $sql = 'DELETE FROM tipo_propiedades WHERE id = :id';
 
     $query = $pdo->prepare($sql);
