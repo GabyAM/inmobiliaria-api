@@ -193,6 +193,32 @@ $app->put('/propiedades/{id}', function (
         return $response->withStatus(400);
     }
 
+    // Si se actualiza el valor por noche, entonces también
+    // hay que actualizar el valor total de las reservas
+    // que referencien a esta propiedad
+    if ($data['valor_noche']) {
+        $sql = 'SELECT * FROM reservas WHERE propiedad_id = :id';
+        $query = $pdo->prepare($sql);
+        $query->bindValue(':id', $id);
+        $query->execute();
+        if ($query->rowCount() > 0) {
+            $valorNoche = $data['valor_noche'];
+            $reservas = $query->fetchAll(PDO::FETCH_ASSOC);
+            $sql =
+                'UPDATE reservas SET valor_total = :valor_total WHERE id = :id';
+            $query = $pdo->prepare($sql);
+            foreach ($reservas as $reserva) {
+                $cantidadNoches = $reserva['cantidad_noches'];
+                $query->bindValue(
+                    ':valor_total',
+                    $cantidadNoches * $valorNoche
+                );
+                $query->bindValue(':id', $reserva['id']);
+                $query->execute();
+            }
+        }
+    }
+
     $stringActualizaciones = construirStringActualizaciones($data);
     $sql =
         'UPDATE propiedades SET ' . $stringActualizaciones . ' WHERE id = :id';
