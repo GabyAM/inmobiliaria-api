@@ -642,6 +642,144 @@ $app->post('/reservas', function (Request $request, Response $response) {
     return $response;
 });
 
+$app->put('/reservas/{id}', function (
+    Request $request,
+    Response $response,
+    array $args
+) {
+    $data = array_intersect_key(
+        $request->getParsedBody() ?? [],
+        array_flip([
+            'propiedad_id',
+            'inquilino_id',
+            'fecha_desde',
+            'cantidad_noches',
+        ])
+    );
+    $id = $args['id'];
+
+    if (empty($data)) {
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'failure',
+                'message' => 'No se ingresó ningun valor',
+            ])
+        );
+        return $response->withStatus(400);
+    }
+
+    $validaciones = [
+        'id' => v::regex('/^[0-9]+$/'),
+        'propiedad_id' => v::intType(),
+        'inquilino_id' => v::intType(),
+        'fecha_desde' => v::date()->greaterThan(date('Y-m-d')),
+        'cantidad_noches' => v::intType(),
+    ];
+
+    $errores = obtenerErrores([...$data, 'id' => $id], $validaciones, true);
+    if (!empty($errores)) {
+        $response
+            ->getBody()
+            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
+        return $response->withStatus(400);
+    }
+
+    $pdo = createConnection();
+
+    $errores = [];
+
+    $sql = 'SELECT * FROM reservas WHERE id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':id', $id);
+    $query->execute();
+    if ($query->rowCount() == 0) {
+        $errores['id'] = 'No existe una reserva con el ID provisto';
+    } else {
+        $reserva = $query->fetch(PDO::FETCH_ASSOC);
+    }
+
+    if (isset($data['id_inquilino'])) {
+        $sql = 'SELECT * FROM inquilinos WHERE id = :id';
+        $query = $pdo->prepare($sql);
+        $query->bindValue(':id', $data['inquilino_id']);
+        $query->execute();
+        if ($query->rowCount() == 0) {
+            $errores['inquilino_id'] =
+                'No existe un inquilino con el ID provisto';
+        } else {
+            $inquilino = $query->fetch(PDO::FETCH_ASSOC);
+            if (!$inquilino['activo']) {
+                $errores['inquilino'] =
+                    'No se puede crear la reserva porque el inquilino no está activo';
+            }
+        }
+    }
+
+    if (isset($data['propiedad_id'])) {
+        $sql = 'SELECT * FROM propiedades WHERE id = :id';
+        $query = $pdo->prepare($sql);
+        $query->bindValue(':id', $data['propiedad_id']);
+        $query->execute();
+        if ($query->rowCount() == 0) {
+            $errores['propiedad_id'] =
+                'No existe una propiedad con el ID provisto';
+        } else {
+            $propiedad = $query->fetch(PDO::FETCH_ASSOC);
+        }
+    }
+    if (!empty($errores)) {
+        $response
+            ->getBody()
+            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
+        return $response->withStatus(400);
+    }
+
+    //actualiza el valor total con los valores valor_noche y cantidad_noches
+    if (isset($data['propiedad_id']) || isset($data['cantidad_noches'])) {
+        $cantidadNoches = isset($data['cantidad_noches'])
+            ? $data['cantidad_noches']
+            : $reserva['cantidad_noches'];
+        if (!isset($propiedad)) {
+            $sql =
+                'SELECT * FROM propiedades WHERE id = ' .
+                $reserva['propiedad_id'];
+            $query = $pdo->query($sql);
+            $propiedad = $query->fetch(PDO::FETCH_ASSOC);
+        }
+
+        $valorNoche = $propiedad['valor_noche'];
+        $data['valor_total'] = $cantidadNoches * $valorNoche;
+    }
+    $stringActualizaciones = '';
+    $i = 0;
+    foreach ($data as $key => $value) {
+        $stringActualizaciones .= $key . ' = ';
+        if (is_bool($value)) {
+            $stringActualizaciones .= $value ? 'true' : 'false';
+        } elseif (is_string($value)) {
+            $stringActualizaciones .= '"' . $value . '"';
+        } else {
+            $stringActualizaciones .= $value;
+        }
+        if ($i < count($data) - 1) {
+            $stringActualizaciones .= ', ';
+        }
+        $i++;
+    }
+    $sql = 'UPDATE reservas SET ' . $stringActualizaciones . ' WHERE id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindParam(':id', $id);
+    $query->execute();
+
+    $response->getBody()->write(
+        json_encode([
+            'status' => 'success',
+            'message' => 'Reserva actualizada',
+        ])
+    );
+    return $response;
+});
+
 //tipos de propiedades--------------------------------------
 
 $app->get('/tipo_propiedades', function (Request $request, Response $response) {
