@@ -809,6 +809,53 @@ $app->put('/reservas/{id}', function (
     return $response;
 });
 
+$app->delete('/reservas/{id}', function (
+    Request $request,
+    Response $response,
+    array $args
+) {
+    $id = $args['id'];
+    $errores = obtenerErrores(
+        ['id' => $id],
+        ['id' => v::notOptional()->regex('/^[0-9]+$/')]
+    );
+
+    if (!empty($errores)) {
+        $response
+            ->getBody()
+            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
+        return $response->withStatus(400);
+    }
+
+    $pdo = createConnection();
+
+    $sql = 'SELECT * FROM reservas WHERE id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':id', $id);
+    $query->execute();
+    if ($query->rowCount() == 0) {
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'failure',
+                'error' => 'No existe una reserva con el ID provisto',
+            ])
+        );
+        return $response->withStatus(400);
+    }
+
+    $sql = 'DELETE FROM reservas WHERE id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':id', $id);
+    $query->execute();
+    $response->getBody()->write(
+        json_encode([
+            'status' => 'success',
+            'message' => 'Se eliminó la reserva',
+        ])
+    );
+    return $response->withStatus(200);
+});
+
 //tipos de propiedades--------------------------------------
 
 $app->get('/tipo_propiedades', function (Request $request, Response $response) {
