@@ -61,6 +61,49 @@ $app->get('/inquilinos/{id}', function(Request $resquest, Response $response, ar
     return $response->withStatus(200);
 });
 
+$app->get('/inquilinos/{id}/reservas', function (Request $request, Response $response,array $args){
+    $id = $args['id'];
+    $pdo = createConnection();
+
+    $sql = 'SELECT * FROM inquilinos WHERE id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':id', $id);
+    $query->execute();
+
+    if($query->rowCount() == 0){
+        $response->getBody()->write(
+            json_encode([
+                'status'=>'failure',
+                'message'=>'no existe ningun inquilino con el ID provisto'
+            ])
+        );
+        return $response->withStatus(400);
+    }
+
+    $sql = 'SELECT * FROM reservas WHERE inquilino_id = :inquilino_id ';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':inquilino_id', $id);
+    $query->execute();
+
+    if($query->rowCount() == 0){
+        $response->getBody()->write(
+            json_encode([
+                'status'=>'failure',
+                'message'=>'el inquilino no realizo ninguna reserva'
+            ])
+        );
+        return $response->withStatus(400);
+    }
+
+    $response->getBody()->write(
+        json_encode([
+            'status'=> 'success',
+            'data'=>$query->fetchAll(PDO::FETCH_ASSOC)
+        ])
+    );
+    return $response->withStatus(200);
+});
+
 $app->post('/inquilinos', function (Request $request, Response $response) {
     $data = $request->getParsedBody();
 
@@ -130,7 +173,7 @@ $app->put('/inquilinos/{id}', function (
         array_flip(['id', 'documento', 'apellido', 'nombre', 'email', 'activo'])
     );
 
-    if (!empty($data)) {
+    if (empty($data)) {
         $response->getBody()->write(
             json_encode([
                 'status' => 'failure',
