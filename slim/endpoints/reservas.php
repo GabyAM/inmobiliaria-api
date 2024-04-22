@@ -101,7 +101,7 @@ $app->post('/reservas', function (Request $request, Response $response) {
     return $response;
 });
 
-$app->put('/reservas/{id}', function (
+$app->put('/reservas/{id:[0-9]+}', function (
     Request $request,
     Response $response,
     array $args
@@ -128,14 +128,13 @@ $app->put('/reservas/{id}', function (
     }
 
     $validaciones = [
-        'id' => v::regex('/^[0-9]+$/'),
         'propiedad_id' => v::intType(),
         'inquilino_id' => v::intType(),
         'fecha_desde' => v::date()->greaterThan(date('Y-m-d')),
         'cantidad_noches' => v::intType(),
     ];
 
-    $errores = obtenerErrores([...$data, 'id' => $id], $validaciones, true);
+    $errores = obtenerErrores($data, $validaciones, true);
     if (!empty($errores)) {
         $response
             ->getBody()
@@ -222,24 +221,12 @@ $app->put('/reservas/{id}', function (
     return $response;
 });
 
-$app->delete('/reservas/{id}', function (
+$app->delete('/reservas/{id:[0-9]+}', function (
     Request $request,
     Response $response,
     array $args
 ) {
     $id = $args['id'];
-    $errores = obtenerErrores(
-        ['id' => $id],
-        ['id' => v::notOptional()->regex('/^[0-9]+$/')]
-    );
-
-    if (!empty($errores)) {
-        $response
-            ->getBody()
-            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
-        return $response->withStatus(400);
-    }
-
     $pdo = createConnection();
 
     $sql = 'SELECT * FROM reservas WHERE id = :id';

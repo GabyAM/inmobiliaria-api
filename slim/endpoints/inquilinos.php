@@ -21,22 +21,12 @@ $app->get('/inquilinos', function (Request $request, Response $response) {
     return $response->withStatus(200);
 });
 //ver inquilino
-$app->get('/inquilinos/{id}', function(Request $resquest, Response $response, array $args){
+$app->get('/inquilinos/{id:[0-9]+}', function (
+    Request $resquest,
+    Response $response,
+    array $args
+) {
     $id = $args['id'];
-    $errores = obtenerErrores(
-        ['id'=>$id],
-        ['id'=>v::notOptional()->regex('/^[0-9]+$/')]
-    );
-
-    if(!empty($errores)){
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'error' => $errores
-            ])
-        );
-        return $response->withStatus(400);
-    }
     $pdo = createConnection();
     $sql = ('SELECT * FROM inquilinos WHERE id = :id');
     $query = $pdo->prepare($sql);
@@ -61,7 +51,11 @@ $app->get('/inquilinos/{id}', function(Request $resquest, Response $response, ar
     return $response->withStatus(200);
 });
 
-$app->get('/inquilinos/{id}/reservas', function (Request $request, Response $response,array $args){
+$app->get('/inquilinos/{id:[0-9]+}/reservas', function (
+    Request $request,
+    Response $response,
+    array $args
+) {
     $id = $args['id'];
     $pdo = createConnection();
 
@@ -163,14 +157,14 @@ $app->post('/inquilinos', function (Request $request, Response $response) {
     return $response->withStatus(200);
 });
 
-$app->put('/inquilinos/{id}', function (
+$app->put('/inquilinos/{id:[0-9]+}', function (
     Request $request,
     Response $response,
     array $args
 ) {
     $data = array_intersect_key(
         $request->getParsedBody() ?? [],
-        array_flip(['id', 'documento', 'apellido', 'nombre', 'email', 'activo'])
+        array_flip(['documento', 'apellido', 'nombre', 'email', 'activo'])
     );
 
     if (empty($data)) {
@@ -186,7 +180,6 @@ $app->put('/inquilinos/{id}', function (
     $id = $args['id'] ?? null;
 
     $verificacion = [
-        'id' => v::regex('/^[0-9]+$/'),
         'documento' => v::stringType()->length(null, 20),
         'apellido' => v::stringType()->length(null, 15),
         'nombre' => v::stringType()->length(null, 25),
@@ -194,7 +187,7 @@ $app->put('/inquilinos/{id}', function (
         'activo' => v::boolType(),
     ];
 
-    $errores = obtenerErrores([...$data, 'id' => $id], $verificacion, true);
+    $errores = obtenerErrores($data, $verificacion, true);
 
     if (!empty($errores)) {
         //esta vacia?
@@ -259,23 +252,12 @@ $app->put('/inquilinos/{id}', function (
     return $response->withStatus(200);
 });
 
-$app->delete('/inquilinos/{id}', function(Request $request, Response $response, array $args){
+$app->delete('/inquilinos/{id:[0-9]+}', function (
+    Request $request,
+    Response $response,
+    array $args
+) {
     $id = $args['id'];
-
-    $errores = obtenerErrores(
-        ['id'=>$id],
-        ['id'=>v::notOptional()->regex('/^[0-9]+$/')]
-    );
-
-    if (!empty($errores)){
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'errors' => $errores,
-            ])
-        );
-        return $response->withStatus(400);
-    }
     $pdo = createConnection();
     $sql = 'SELECT * FROM inquilinos WHERE id = :id';
 

@@ -78,7 +78,7 @@ $app->post('/tipo_propiedades', function (
     return $response->withStatus(200);
 });
 
-$app->put('/tipo_propiedades/{id}', function (
+$app->put('/tipo_propiedades/{id:[0-9]+}', function (
     request $request,
     response $response,
     array $args
@@ -87,14 +87,11 @@ $app->put('/tipo_propiedades/{id}', function (
     $id = $args['id'];
     $nombre = $data['nombre'] ?? null;
 
-    $validaciones = [
-        'id' => v::notOptional()->regex('/^[0-9]+$/'),
-        'nombre' => v::notOptional()->stringType(),
-    ];
-
     $errores = obtenerErrores(
-        ['id' => $id, 'nombre' => $nombre],
-        $validaciones
+        ['nombre' => $nombre],
+        [
+            'nombre' => v::notOptional()->stringType(),
+        ]
     );
 
     if (!empty($errores)) {
@@ -158,27 +155,12 @@ $app->put('/tipo_propiedades/{id}', function (
     return $response->withStatus(200);
 });
 
-$app->delete('/tipo_propiedades/{id}', function (
+$app->delete('/tipo_propiedades/{id:[0-9]+}', function (
     request $request,
     response $response,
     array $args
 ) {
     $id = $args['id'];
-
-    $errores = obtenerErrores(
-        ['id' => $id],
-        ['id' => v::notOptional()->regex('/^[0-9]+$/')]
-    );
-
-    if (!empty($errores)) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'errores' => $errores,
-            ])
-        );
-        return $response->withStatus(400);
-    }
 
     $pdo = createConnection();
     $sql = "SELECT * FROM tipo_propiedades

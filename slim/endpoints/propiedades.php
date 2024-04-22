@@ -103,7 +103,7 @@ $app->post('/propiedades', function (Request $request, Response $response) {
     return $response->withStatus(201);
 });
 
-$app->put('/propiedades/{id}', function (
+$app->put('/propiedades/{id:[0-9]+}', function (
     Request $request,
     Response $response,
     array $args
@@ -136,9 +136,7 @@ $app->put('/propiedades/{id}', function (
         return $response->withStatus(400);
     }
 
-    $id = $args['id'];
     $validaciones = [
-        'id' => v::notOptional()->regex('/^[0-9]+$/'),
         'domicilio' => v::stringType(),
         'localidad_id' => v::intType(),
         'cantidad_habitaciones' => v::intType(),
@@ -154,7 +152,7 @@ $app->put('/propiedades/{id}', function (
         'tipo_imagen' => v::regex('/jpg|jpeg|png/'),
     ];
 
-    $errores = obtenerErrores([...$data, 'id' => $id], $validaciones, true);
+    $errores = obtenerErrores($data, $validaciones, true);
     if (!empty($errores)) {
         $response
             ->getBody()
@@ -190,6 +188,7 @@ $app->put('/propiedades/{id}', function (
         return $response->withStatus(400);
     }
 
+    $id = $args['id'];
     // Si se actualiza el valor por noche, entonces también
     // hay que actualizar el valor total de las reservas
     // que referencien a esta propiedad
@@ -231,22 +230,12 @@ $app->put('/propiedades/{id}', function (
     return $response->withStatus(200);
 });
 
-$app->delete('/propiedades/{id}', function (
+$app->delete('/propiedades/{id:[0-9]+}', function (
     Request $request,
     Response $response,
     array $args
 ) {
     $id = $args['id'];
-    $errores = obtenerErrores(
-        ['id' => $id],
-        ['id' => v::notOptional()->regex('/^[0-9]+$/')]
-    );
-    if (!empty($errores)) {
-        $response
-            ->getBody()
-            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
-        return $response->withStatus(400);
-    }
     $pdo = createConnection();
 
     $sql = 'SELECT * FROM reservas WHERE id = :id';

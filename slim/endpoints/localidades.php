@@ -61,7 +61,7 @@ $app->post('/localidades', function (Request $request, Response $response) {
     return $response->withStatus(201);
 });
 
-$app->put('/localidades/{id}', function (
+$app->put('/localidades/{id:[0-9]+}', function (
     Request $request,
     Response $response,
     array $args
@@ -70,17 +70,13 @@ $app->put('/localidades/{id}', function (
     $id = $args['id'];
     $nombre = $data['nombre'] ?? null;
 
-    $validaciones = [
-        'id' => v::notOptional()->regex('/^[0-9]+$/'),
-        'nombre' => v::notOptional()->stringType(),
-    ];
-
     $errores = obtenerErrores(
         [
-            'id' => $id,
             'nombre' => $nombre,
         ],
-        $validaciones
+        [
+            'nombre' => v::notOptional()->stringType(),
+        ]
     );
     if (!empty($errores)) {
         $response
@@ -130,23 +126,12 @@ $app->put('/localidades/{id}', function (
     return $response->withStatus(200);
 });
 
-$app->delete('/localidades/{id}', function (
+$app->delete('/localidades/{id:[0-9]+}', function (
     Request $request,
     Response $response,
     array $args
 ) {
     $id = $args['id'];
-    $errores = obtenerErrores(
-        ['id' => $id],
-        ['id' => v::notOptional()->regex('/^[0-9]+$/')]
-    );
-    if (!empty($errores)) {
-        $response
-            ->getBody()
-            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
-        return $response->withStatus(400);
-    }
-
     $pdo = createConnection();
 
     $sql = 'SELECT * FROM localidades WHERE id = :id';

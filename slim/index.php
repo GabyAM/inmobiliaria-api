@@ -20,7 +20,7 @@ $customErrorHandler = function (Request $request, Throwable $exception) use (
     $response = $app->getResponseFactory()->createResponse();
     $response->getBody()->write(json_encode($payload, JSON_UNESCAPED_UNICODE));
 
-    return $response->withStatus(500);
+    return $response->withStatus($exception->getCode());
 };
 
 $errorMiddleware = $app->addErrorMiddleware(true, true, true);
