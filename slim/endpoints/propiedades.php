@@ -54,6 +54,37 @@ $app->get('/propiedades', function (Request $request, Response $response) {
     return $response->withStatus(201);
 });
 
+$app->get('/propiedades/{id:[0-9]+}', function (
+    Request $request,
+    Response $response,
+    array $args
+) {
+    $pdo = createConnection();
+    $id = $args['id'];
+
+    $sql = 'SELECT * FROM propiedades WHERE id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':id', $id);
+    $query->execute();
+    if ($query->rowCount() == 0) {
+        $response->getBody()->write(
+            json_encode([
+                'status' => 'failure',
+                'error' => 'No existe una propiedad con el ID provisto',
+            ])
+        );
+        return $response->withStatus(400);
+    }
+    $propiedad = $query->fetch(PDO::FETCH_ASSOC);
+    $response->getBody()->write(
+        json_encode([
+            'status' => 'success',
+            'result' => $propiedad,
+        ])
+    );
+    return $response->withStatus(200);
+});
+
 $app->post('/propiedades', function (Request $request, Response $response) {
     $data = array_intersect_key(
         $request->getParsedBody() ?? [],
