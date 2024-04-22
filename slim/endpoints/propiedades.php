@@ -178,7 +178,8 @@ $app->put('/propiedades/{id:[0-9]+}', function (
         $query = $pdo->prepare($sql);
         $query->bindValue(':id', $tipoPropiedadId);
         if ($query->rowCount() != 1) {
-            $errores['propiedad_id'];
+            $errores['propiedad_id'] =
+                'No existe un tipo de propiedad con el ID provisto';
         }
     }
     if (!empty($errores)) {
@@ -192,7 +193,7 @@ $app->put('/propiedades/{id:[0-9]+}', function (
     // Si se actualiza el valor por noche, entonces también
     // hay que actualizar el valor total de las reservas
     // que referencien a esta propiedad
-    if ($data['valor_noche']) {
+    if (isset($data['valor_noche'])) {
         $sql = 'SELECT * FROM reservas WHERE propiedad_id = :id';
         $query = $pdo->prepare($sql);
         $query->bindValue(':id', $id);

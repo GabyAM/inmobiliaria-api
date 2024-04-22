@@ -28,24 +28,25 @@ $app->get('/inquilinos/{id:[0-9]+}', function (
 ) {
     $id = $args['id'];
     $pdo = createConnection();
-    $sql = ('SELECT * FROM inquilinos WHERE id = :id');
+    $sql = 'SELECT * FROM inquilinos WHERE id = :id';
     $query = $pdo->prepare($sql);
     $query->bindValue(':id', $id);
     $query->execute();
 
-    if($query->rowCount() == 0){
+    if ($query->rowCount() == 0) {
         $response->getBody()->write(
             json_encode([
                 'status' => 'failure',
-                'message' => 'no se encontro ningun inquilino con el ID provisto',
+                'message' =>
+                    'no se encontro ningun inquilino con el ID provisto',
             ])
         );
         return $response->withStatus(400);
     }
     $response->getBody()->write(
         json_encode([
-            'status'=> 'success',
-            'data'=> $query->fetchAll(PDO::FETCH_ASSOC)
+            'status' => 'success',
+            'data' => $query->fetchAll(PDO::FETCH_ASSOC),
         ])
     );
     return $response->withStatus(200);
@@ -64,11 +65,11 @@ $app->get('/inquilinos/{id:[0-9]+}/reservas', function (
     $query->bindValue(':id', $id);
     $query->execute();
 
-    if($query->rowCount() == 0){
+    if ($query->rowCount() == 0) {
         $response->getBody()->write(
             json_encode([
-                'status'=>'failure',
-                'message'=>'no existe ningun inquilino con el ID provisto'
+                'status' => 'failure',
+                'message' => 'no existe ningun inquilino con el ID provisto',
             ])
         );
         return $response->withStatus(400);
@@ -79,20 +80,21 @@ $app->get('/inquilinos/{id:[0-9]+}/reservas', function (
     $query->bindValue(':inquilino_id', $id);
     $query->execute();
 
-    if($query->rowCount() == 0){
+    /*if ($query->rowCount() == 0) {
         $response->getBody()->write(
             json_encode([
-                'status'=>'failure',
-                'message'=>'el inquilino no realizo ninguna reserva'
+                'status' => 'failure',
+                'message' => 'el inquilino no realizo ninguna reserva',
             ])
         );
         return $response->withStatus(400);
-    }
+    }     No hace falta devolver un error cuando el inquilino no tiene reservas, basta con devolver
+          el arreglo de reservas vacío */
 
     $response->getBody()->write(
         json_encode([
-            'status'=> 'success',
-            'data'=>$query->fetchAll(PDO::FETCH_ASSOC)
+            'status' => 'success',
+            'data' => $query->fetchAll(PDO::FETCH_ASSOC),
         ])
     );
     return $response->withStatus(200);
@@ -265,11 +267,11 @@ $app->delete('/inquilinos/{id:[0-9]+}', function (
     $query->bindValue(':id', $id);
     $query->execute();
 
-    if($query->rowCount() == 0){
+    if ($query->rowCount() == 0) {
         $response->getBody()->write(
             json_encode([
-                'status'=>'failure',
-                'message'=>'no existe un inquilino con el ID provisto'
+                'status' => 'failure',
+                'message' => 'no existe un inquilino con el ID provisto',
             ])
         );
         return $response->withStatus(400);
@@ -278,12 +280,12 @@ $app->delete('/inquilinos/{id:[0-9]+}', function (
     $sql = 'DELETE FROM inquilinos WHERE id = :id';
 
     $query = $pdo->prepare($sql);
-    $query->bindValue(':id',$id);
+    $query->bindValue(':id', $id);
     $query->execute();
     $response->getBody()->write(
         json_encode([
-            'status'=>'success',
-            'message'=>'se elimino el inquilino'
+            'status' => 'success',
+            'message' => 'se elimino el inquilino',
         ])
     );
     return $response->withStatus(200);
