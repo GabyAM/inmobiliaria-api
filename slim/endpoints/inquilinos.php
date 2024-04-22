@@ -247,24 +247,33 @@ $app->delete('/inquilinos/{id:[0-9]+}', function (
 ) {
     $id = $args['id'];
     $pdo = createConnection();
-    $sql = 'SELECT * FROM inquilinos WHERE id = :id';
 
+    $errores = [];
+
+    if (!existeEnTabla($pdo, 'inquilinos', $id)) {
+        $errores['id'] = 'No existe un inquilino con el ID provisto';
+    }
+
+    $sql = 'SELECT * FROM reservas WHERE inquilino_id = :id';
     $query = $pdo->prepare($sql);
     $query->bindValue(':id', $id);
     $query->execute();
+    if ($query->rowCount() > 0) {
+        $errores['reserva'] =
+            'no se puede eliminar el inquilino porque una reserva lo está utilizando';
+    }
 
-    if ($query->rowCount() == 0) {
+    if (!empty($errores)) {
         $response->getBody()->write(
             json_encode([
                 'status' => 'failure',
-                'message' => 'no existe un inquilino con el ID provisto',
+                'errors' => $errores,
             ])
         );
         return $response->withStatus(400);
     }
 
     $sql = 'DELETE FROM inquilinos WHERE id = :id';
-
     $query = $pdo->prepare($sql);
     $query->bindValue(':id', $id);
     $query->execute();
