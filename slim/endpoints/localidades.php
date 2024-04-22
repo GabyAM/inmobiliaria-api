@@ -87,12 +87,8 @@ $app->put('/localidades/{id:[0-9]+}', function (
 
     $pdo = createConnection();
 
-    $sql = 'SELECT * FROM localidades WHERE id = :id';
-    $query = $pdo->prepare($sql);
-    $query->bindParam(':id', $id);
-    $query->execute();
-    if ($query->rowCount() == 0) {
-        $errores['localidad_id'] = 'No existe una localidad con el ID provisto';
+    if (!existeEnTabla($pdo, 'localidades', $id)) {
+        $errores['id'] = 'No existe una localidad con el ID provisto';
     }
 
     $sql = 'SELECT * FROM localidades WHERE nombre = :nombre AND id != :id';
@@ -134,18 +130,8 @@ $app->delete('/localidades/{id:[0-9]+}', function (
     $id = $args['id'];
     $pdo = createConnection();
 
-    $sql = 'SELECT * FROM localidades WHERE id = :id';
-    $query = $pdo->prepare($sql);
-    $query->bindParam(':id', $id);
-    $query->execute();
-    if ($query->rowCount() == 0) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'error' => 'No existe una localidad con el ID provisto',
-            ])
-        );
-        return $response->withStatus(400);
+    if (!existeEnTabla($pdo, 'localidades', $id)) {
+        $errores['id'] = 'No existe una localidad con el ID provisto';
     }
 
     $sql = 'SELECT * FROM propiedades WHERE localidad_id = :id';
@@ -153,13 +139,14 @@ $app->delete('/localidades/{id:[0-9]+}', function (
     $query->bindValue(':id', $id);
     $query->execute();
     if ($query->rowCount() > 0) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'error' =>
-                    'No se puede eliminar la localidad porque una propiedad la está usando',
-            ])
-        );
+        $errores['nombre'] =
+            'No se puede eliminar la localidad porque una propiedad la está usando';
+    }
+
+    if (!empty($errores)) {
+        $response
+            ->getBody()
+            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
         return $response->withStatus(400);
     }
 

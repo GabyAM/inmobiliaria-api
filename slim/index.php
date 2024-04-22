@@ -20,7 +20,9 @@ $customErrorHandler = function (Request $request, Throwable $exception) use (
     $response = $app->getResponseFactory()->createResponse();
     $response->getBody()->write(json_encode($payload, JSON_UNESCAPED_UNICODE));
 
-    return $response->withStatus($exception->getCode());
+    return $response->withStatus(
+        $exception->getCode() > 500 ? 500 : $exception->getCode()
+    );
 };
 
 $errorMiddleware = $app->addErrorMiddleware(true, true, true);
@@ -85,6 +87,14 @@ function createConnection() {
     $password = 'seminariophp';
 
     return new PDO($dsn, $username, $password);
+}
+
+function existeEnTabla($pdo, $nombreTabla, $id) {
+    $sql = 'SELECT * FROM ' . $nombreTabla . ' WHERE id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':id', $id, PDO::PARAM_INT);
+    $query->execute();
+    return $query->rowCount() > 0;
 }
 
 require __DIR__ . '/endpoints/localidades.php';

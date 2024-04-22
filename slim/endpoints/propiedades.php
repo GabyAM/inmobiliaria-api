@@ -66,20 +66,12 @@ $app->post('/propiedades', function (Request $request, Response $response) {
     $pdo = createConnection();
 
     $localidadId = $data['localidad_id'];
-    $sql = 'SELECT * FROM localidades WHERE id = :id';
-    $query = $pdo->prepare($sql);
-    $query->bindValue(':id', $localidadId);
-    $query->execute();
-    if ($query->rowCount() == 0) {
+    if (!existeEnTabla($pdo, 'localidades', $localidadId)) {
         $errores['localidad_id'] = 'No existe una localidad con el ID provisto';
     }
 
     $tipoPropiedadId = $data['tipo_propiedad_id'];
-    $sql = 'SELECT * FROM tipo_propiedades WHERE id = :id';
-    $query = $pdo->prepare($sql);
-    $query->bindValue(':id', $tipoPropiedadId);
-    $query->execute();
-    if ($query->rowCount() == 0) {
+    if (!existeEnTabla($pdo, 'tipo_propiedades', $tipoPropiedadId)) {
         $errores['tipo_propiedad_id'] =
             'No existe una tipo de propiedad con el ID provisto';
     }
@@ -164,20 +156,14 @@ $app->put('/propiedades/{id:[0-9]+}', function (
 
     if (isset($data['localidad_id'])) {
         $localidadId = $data['localidad_id'];
-        $sql = 'SELECT FROM localidades WHERE id = :id';
-        $query = $pdo->prepare($sql);
-        $query->bindValue(':id', $localidadId);
-        if ($query->rowCount() != 1) {
+        if (!existeEnTabla($pdo, 'localidades', $localidadId)) {
             $errores['localidad_id'] =
                 'No existe una localidad con el ID provisto';
         }
     }
     if (isset($data['tipo_propiedad_id'])) {
         $tipoPropiedadId = $data['tipo_propiedad_id'];
-        $sql = 'SELECT FROM tipo_propiedades WHERE id = :id';
-        $query = $pdo->prepare($sql);
-        $query->bindValue(':id', $tipoPropiedadId);
-        if ($query->rowCount() != 1) {
+        if (!existeEnTabla($pdo, 'tipo_propiedades', $tipoPropiedadId)) {
             $errores['propiedad_id'] =
                 'No existe un tipo de propiedad con el ID provisto';
         }
@@ -239,7 +225,7 @@ $app->delete('/propiedades/{id:[0-9]+}', function (
     $id = $args['id'];
     $pdo = createConnection();
 
-    $sql = 'SELECT * FROM reservas WHERE id = :id';
+    $sql = 'SELECT * FROM reservas WHERE propiedad_id = :id';
     $query = $pdo->prepare($sql);
     $query->bindValue(':id', $id);
     $query->execute();
@@ -248,11 +234,8 @@ $app->delete('/propiedades/{id:[0-9]+}', function (
             'No se puede eliminar la propiedad porque una reserva la está usando';
         //no es el mejor nombre
     }
-    $sql = 'SELECT * FROM propiedades WHERE id = :id';
-    $query = $pdo->prepare($sql);
-    $query->bindValue(':id', $id);
-    $query->execute();
-    if ($query->rowCount() == 0) {
+
+    if (!existeEnTabla($pdo, 'propiedades', $id)) {
         $errores['id'] = 'No existe una propiedad con el ID provisto';
     }
 

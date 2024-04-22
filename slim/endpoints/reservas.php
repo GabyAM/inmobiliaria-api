@@ -64,11 +64,7 @@ $app->post('/reservas', function (Request $request, Response $response) {
         }
     }
 
-    $sql = 'SELECT * FROM propiedades WHERE id = :id';
-    $query = $pdo->prepare($sql);
-    $query->bindValue(':id', $propiedadId);
-    $query->execute();
-    if ($query->rowCount() == 0) {
+    if (!existeEnTabla($pdo, 'propiedades', $propiedadId)) {
         $errores['propiedad_id'] = 'No existe una propiedad con el ID provisto';
     }
 
@@ -229,11 +225,7 @@ $app->delete('/reservas/{id:[0-9]+}', function (
     $id = $args['id'];
     $pdo = createConnection();
 
-    $sql = 'SELECT * FROM reservas WHERE id = :id';
-    $query = $pdo->prepare($sql);
-    $query->bindValue(':id', $id);
-    $query->execute();
-    if ($query->rowCount() == 0) {
+    if (!existeEnTabla($pdo, 'reservas', $id)) {
         $response->getBody()->write(
             json_encode([
                 'status' => 'failure',
