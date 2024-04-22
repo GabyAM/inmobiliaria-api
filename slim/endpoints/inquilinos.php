@@ -5,6 +5,7 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use Respect\Validation\Validator as v;
 
 require_once __DIR__ . '/../utilidades/strings_sql.php';
+require_once __DIR__ . '/../validaciones/inquilino.php';
 //listar
 $app->get('/inquilinos', function (Request $request, Response $response) {
     $pdo = createConnection();
@@ -103,15 +104,7 @@ $app->get('/inquilinos/{id:[0-9]+}/reservas', function (
 $app->post('/inquilinos', function (Request $request, Response $response) {
     $data = $request->getParsedBody();
 
-    $validaciones = [
-        'documento' => v::notoptional()->stringType()->length(null, 20),
-        'apellido' => v::notOptional()->stringType()->length(null, 15),
-        'nombre' => v::notOptional()->stringType()->length(null, 25),
-        'email' => v::notOptional()->email()->length(null, 20),
-        'activo' => v::notOptional()->boolType(),
-    ];
-
-    $errores = obtenerErrores($data, $validaciones);
+    $errores = obtenerErrores($data, validaciones_inquilino);
 
     if (!empty($errores)) {
         $response->getBody()->write(
@@ -179,17 +172,10 @@ $app->put('/inquilinos/{id:[0-9]+}', function (
         return $response->withStatus(400);
     }
 
-    $id = $args['id'] ?? null;
+    //$id = $args['id'] ?? null;     $args['id'] nunca es null, ya que si no existiera el id, el url sería invalido
+    $id = $args['id'];
 
-    $verificacion = [
-        'documento' => v::stringType()->length(null, 20),
-        'apellido' => v::stringType()->length(null, 15),
-        'nombre' => v::stringType()->length(null, 25),
-        'email' => v::email()->length(null, 20),
-        'activo' => v::boolType(),
-    ];
-
-    $errores = obtenerErrores($data, $verificacion, true);
+    $errores = obtenerErrores($data, validaciones_inquilino, true);
 
     if (!empty($errores)) {
         //esta vacia?

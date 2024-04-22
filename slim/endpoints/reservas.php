@@ -5,6 +5,7 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use Respect\Validation\Validator as v;
 
 require_once __DIR__ . '/../utilidades/strings_sql.php';
+require_once __DIR__ . '/../validaciones/reserva.php';
 
 $app->get('/reservas', function (Request $request, Response $response) {
     $pdo = createConnection();
@@ -28,14 +29,7 @@ $app->post('/reservas', function (Request $request, Response $response) {
         ])
     );
 
-    $validaciones = [
-        'propiedad_id' => v::notOptional()->intType(),
-        'inquilino_id' => v::notOptional()->intType(),
-        'fecha_desde' => v::notOptional()->date(),
-        'cantidad_noches' => v::notOptional()->intType(),
-    ];
-
-    $errores = obtenerErrores($data, $validaciones);
+    $errores = obtenerErrores($data, validaciones_reserva);
     if (!empty($errores)) {
         $response
             ->getBody()
@@ -123,14 +117,7 @@ $app->put('/reservas/{id:[0-9]+}', function (
         return $response->withStatus(400);
     }
 
-    $validaciones = [
-        'propiedad_id' => v::intType(),
-        'inquilino_id' => v::intType(),
-        'fecha_desde' => v::date()->greaterThan(date('Y-m-d')),
-        'cantidad_noches' => v::intType(),
-    ];
-
-    $errores = obtenerErrores($data, $validaciones, true);
+    $errores = obtenerErrores($data, validaciones_reserva, true);
     if (!empty($errores)) {
         $response
             ->getBody()

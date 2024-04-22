@@ -4,6 +4,8 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Respect\Validation\Validator as v;
 
+require_once __DIR__ . '/../validaciones/localidad.php';
+
 $app->get('/localidades', function (Request $request, Response $response) {
     $pdo = createConnection();
 
@@ -20,10 +22,7 @@ $app->post('/localidades', function (Request $request, Response $response) {
     $data = $request->getParsedBody();
     $nombre = $data['nombre'] ?? null;
 
-    $errores = obtenerErrores(
-        ['nombre' => $nombre],
-        ['nombre' => v::notOptional()->stringType()]
-    );
+    $errores = obtenerErrores(['nombre' => $nombre], validaciones_localidad);
     if (!empty($errores)) {
         $response
             ->getBody()
@@ -74,9 +73,7 @@ $app->put('/localidades/{id:[0-9]+}', function (
         [
             'nombre' => $nombre,
         ],
-        [
-            'nombre' => v::notOptional()->stringType(),
-        ]
+        validaciones_localidad
     );
     if (!empty($errores)) {
         $response

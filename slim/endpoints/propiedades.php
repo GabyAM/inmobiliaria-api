@@ -5,6 +5,7 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use Respect\Validation\Validator as v;
 
 require_once __DIR__ . '/../utilidades/strings_sql.php';
+require_once __DIR__ . '/../validaciones/propiedad.php';
 
 $app->get('/propiedades', function (Request $request, Response $response) {
     $pdo = createConnection();
@@ -38,23 +39,7 @@ $app->post('/propiedades', function (Request $request, Response $response) {
         ])
     ); //creo un nuevo array con los campos necesarios para no operar sobre campos adicionales/incorrectos
 
-    $validaciones = [
-        'domicilio' => v::notOptional()->stringType(),
-        'localidad_id' => v::notOptional()->intType(),
-        'cantidad_habitaciones' => v::optional(v::intType()),
-        'cantidad_banios' => v::optional(v::intType()),
-        'cochera' => v::optional(v::boolType()),
-        'cantidad_huespedes' => v::notOptional()->intType(),
-        'fecha_inicio_disponibilidad' => v::notOptional()->date(),
-        'cantidad_dias' => v::notOptional()->intType(),
-        'disponible' => v::optional(v::boolType()), //Lo hago opcional por el momento porque por algún motivo no se valida correctamente
-        'valor_noche' => v::notOptional()->intType(),
-        'tipo_propiedad_id' => v::notOptional()->intType(),
-        'imagen' => v::optional(v::stringType()),
-        'tipo_imagen' => v::optional(v::regex('/jpg|jpeg|png/')),
-    ];
-
-    $errores = obtenerErrores($data, $validaciones);
+    $errores = obtenerErrores($data, validaciones_propiedad);
 
     if (!empty($errores)) {
         $response
@@ -128,23 +113,7 @@ $app->put('/propiedades/{id:[0-9]+}', function (
         return $response->withStatus(400);
     }
 
-    $validaciones = [
-        'domicilio' => v::stringType(),
-        'localidad_id' => v::intType(),
-        'cantidad_habitaciones' => v::intType(),
-        'cantidad_banios' => v::intType(),
-        'cochera' => v::boolType(),
-        'cantidad_huespedes' => v::intType(),
-        'fecha_inicio_disponibilidad' => v::date(),
-        'cantidad_dias' => v::intType(),
-        'disponible' => v::boolType(),
-        'valor_noche' => v::intType(),
-        'tipo_propiedad_id' => v::intType(),
-        'imagen' => v::stringType(),
-        'tipo_imagen' => v::regex('/jpg|jpeg|png/'),
-    ];
-
-    $errores = obtenerErrores($data, $validaciones, true);
+    $errores = obtenerErrores($data, validaciones_propiedad, true);
     if (!empty($errores)) {
         $response
             ->getBody()
