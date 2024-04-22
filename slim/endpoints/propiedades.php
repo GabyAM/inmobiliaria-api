@@ -8,9 +8,44 @@ require_once __DIR__ . '/../utilidades/strings_sql.php';
 require_once __DIR__ . '/../validaciones/propiedad.php';
 
 $app->get('/propiedades', function (Request $request, Response $response) {
+    $params = array_intersect_key(
+        $request->getQueryParams() ?? [],
+        array_flip([
+            'disponible',
+            'localidad_id',
+            'fecha_inicio_disponibilidad',
+            'cantidad_huespedes',
+        ])
+    );
+
+    $errores = obtenerErrores($params, validaciones_filtros_propiedad, true);
+    if (!empty($errores)) {
+        $response
+            ->getBody()
+            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
+        return $response->withStatus(400);
+    }
+
     $pdo = createConnection();
 
+    $stringCondiciones = '';
+    $i = 0;
+    foreach ($params as $key => $value) {
+        if ($key == 'fecha_inicio_disponibilidad') {
+            $stringCondiciones .= $key . ' = "' . $value . '"';
+        } else {
+            $stringCondiciones .= $key . ' = ' . $value;
+        }
+        if ($i < count($params) - 1) {
+            $stringCondiciones .= ', ';
+        }
+        $i++;
+    }
+
     $sql = 'SELECT * FROM propiedades';
+    if ($stringCondiciones != '') {
+        $sql .= ' WHERE ' . $stringCondiciones;
+    }
     $query = $pdo->query($sql);
     $results = $query->fetchAll(PDO::FETCH_ASSOC);
     $data = ['status' => 'success', 'results' => $results];

@@ -16,3 +16,10 @@ define('validaciones_propiedad', [
     'imagen' => v::optional(v::stringType()),
     'tipo_imagen' => v::optional(v::regex('/jpg|jpeg|png/')),
 ]);
+
+define('validaciones_filtros_propiedad', [
+    'disponible' => v::regex('/true|false/'),
+    'localidad_id' => v::regex('/^[0-9]+$/'),
+    'fecha_inicio_disponibilidad' => v::date(),
+    'cantidad_huespedes' => v::regex('/^[0-9]+$/'),
+]);
