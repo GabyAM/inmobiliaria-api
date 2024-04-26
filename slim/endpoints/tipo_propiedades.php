@@ -32,7 +32,8 @@ $app->post('/tipo_propiedades', function (
 
     $errores = obtenerErrores(
         ['nombre' => $nombre],
-        validaciones_tipo_propiedad
+        validaciones_tipo_propiedad,
+        mensajes_error_tipo_propiedad
     );
 
     if (!empty($errores)) {
@@ -84,7 +85,8 @@ $app->put('/tipo_propiedades/{id:[0-9]+}', function (
 
     $errores = obtenerErrores(
         ['nombre' => $nombre],
-        validaciones_tipo_propiedad
+        validaciones_tipo_propiedad,
+        mensajes_error_tipo_propiedad
     );
 
     if (!empty($errores)) {

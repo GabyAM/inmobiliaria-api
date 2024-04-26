@@ -22,7 +22,11 @@ $app->post('/localidades', function (Request $request, Response $response) {
     $data = $request->getParsedBody();
     $nombre = $data['nombre'] ?? null;
 
-    $errores = obtenerErrores(['nombre' => $nombre], validaciones_localidad);
+    $errores = obtenerErrores(
+        ['nombre' => $nombre],
+        validaciones_localidad,
+        mensajes_error_localidad
+    );
     if (!empty($errores)) {
         $response
             ->getBody()
@@ -67,7 +71,8 @@ $app->put('/localidades/{id:[0-9]+}', function (
         [
             'nombre' => $nombre,
         ],
-        validaciones_localidad
+        validaciones_localidad,
+        mensajes_error_localidad
     );
     if (!empty($errores)) {
         $response

@@ -18,7 +18,12 @@ $app->get('/propiedades', function (Request $request, Response $response) {
         ])
     );
 
-    $errores = obtenerErrores($params, validaciones_filtros_propiedad, true);
+    $errores = obtenerErrores(
+        $params,
+        validaciones_filtros_propiedad,
+        mensajes_error_filtros_propiedad,
+        true
+    );
     if (!empty($errores)) {
         $response
             ->getBody()
@@ -99,7 +104,11 @@ $app->post('/propiedades', function (Request $request, Response $response) {
         ])
     ); //creo un nuevo array con los campos necesarios para no operar sobre campos adicionales/incorrectos
 
-    $errores = obtenerErrores($data, validaciones_propiedad);
+    $errores = obtenerErrores(
+        $data,
+        validaciones_propiedad,
+        mensajes_error_propiedad
+    );
 
     if (!empty($errores)) {
         $response
@@ -162,7 +171,12 @@ $app->put('/propiedades/{id:[0-9]+}', function (
         throw new Exception('No se insertó ningún valor', 400);
     }
 
-    $errores = obtenerErrores($data, validaciones_propiedad, true);
+    $errores = obtenerErrores(
+        $data,
+        validaciones_propiedad,
+        mensajes_error_propiedad,
+        true
+    );
     if (!empty($errores)) {
         $response
             ->getBody()

@@ -29,7 +29,11 @@ $app->post('/reservas', function (Request $request, Response $response) {
         ])
     );
 
-    $errores = obtenerErrores($data, validaciones_reserva);
+    $errores = obtenerErrores(
+        $data,
+        validaciones_reserva,
+        mensajes_error_reserva
+    );
     if (!empty($errores)) {
         $response
             ->getBody()
@@ -106,7 +110,12 @@ $app->put('/reservas/{id:[0-9]+}', function (
         throw new Exception('No se ingresó ningun valor', 400);
     }
 
-    $errores = obtenerErrores($data, validaciones_reserva, true);
+    $errores = obtenerErrores(
+        $data,
+        validaciones_reserva,
+        mensajes_error_reserva,
+        true
+    );
     if (!empty($errores)) {
         $response
             ->getBody()

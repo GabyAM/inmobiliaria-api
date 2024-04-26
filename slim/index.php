@@ -43,17 +43,22 @@ $app->add(function ($request, $handler) {
         ->withHeader('Content-Type', 'application/json');
 });
 
-function obtenerErrores($inputs, $validaciones, $opcionales = false) {
-    $mensajes = [
-        'notOptional' => 'Este campo es requerido',
-        'stringType' => 'Este campo debe ser de tipo string',
-        'intType' => 'Este campo debe ser un entero',
-        'numericVal' => 'Este campo debe ser un numero',
-        'boolType' => 'Este campo debe ser un booleano',
-        'date' => 'Este campo debe ser una fecha en el formato 2024-04-12',
-        'regex' => 'Este campo no está en el formato correcto',
-        'greaterThan' => 'Este campo debe ser una fecha próxima',
-    ];
+function traducirMensajes($mensajes, $traducciones) {
+    $mensajesTraducidos = [];
+    foreach ($mensajes as $campo => $reglas) {
+        $mensajesTraducidos[$campo] = [];
+        foreach ($reglas as $regla => $mensaje) {
+            $mensajesTraducidos[$campo][$regla] = $traducciones[$campo][$regla];
+        }
+    }
+    return $mensajesTraducidos;
+}
+function obtenerErrores(
+    $inputs,
+    $validaciones,
+    $mensajes,
+    $opcionales = false
+) {
     $errores = [];
     if ($opcionales) {
         foreach ($validaciones as $campo => $regla) {
@@ -62,23 +67,23 @@ function obtenerErrores($inputs, $validaciones, $opcionales = false) {
                 try {
                     $regla->assert($valor);
                 } catch (NestedValidationException $e) {
-                    $errores[$campo] = $e->getMessages($mensajes);
+                    $errores[$campo] = $e->getMessages();
                 }
             }
         }
     } else {
         foreach ($validaciones as $campo => $regla) {
             $valor = isset($inputs[$campo]) ? $inputs[$campo] : null;
-            // echo $campo . ': ' . (string) $valor; //debug
+            //echo $campo . ': ' . (string) $valor; //debug
             try {
                 $regla->assert($valor);
             } catch (NestedValidationException $e) {
-                $errores[$campo] = $e->getMessages($mensajes);
+                $errores[$campo] = $e->getMessages();
             }
         }
     }
 
-    return $errores;
+    return traducirMensajes($errores, $mensajes);
 }
 
 function createConnection() {

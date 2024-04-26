@@ -100,7 +100,11 @@ $app->post('/inquilinos', function (Request $request, Response $response) {
         array_flip(['nombre_usuario', 'nombre', 'apellido', 'email', 'activo'])
     );
 
-    $errores = obtenerErrores($data, validaciones_inquilino);
+    $errores = obtenerErrores(
+        $data,
+        validaciones_inquilino,
+        mensajes_error_inquilino
+    );
 
     if (!empty($errores)) {
         $response->getBody()->write(
@@ -159,7 +163,12 @@ $app->put('/inquilinos/{id:[0-9]+}', function (
     //$id = $args['id'] ?? null;     $args['id'] nunca es null, ya que si no existiera el id, el url sería invalido
     $id = $args['id'];
 
-    $errores = obtenerErrores($data, validaciones_inquilino, true);
+    $errores = obtenerErrores(
+        $data,
+        validaciones_inquilino,
+        mensajes_error_inquilino,
+        true
+    );
 
     if (!empty($errores)) {
         //esta vacia?
