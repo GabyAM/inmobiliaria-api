@@ -67,13 +67,7 @@ $app->get('/propiedades/{id:[0-9]+}', function (
     $query->bindValue(':id', $id);
     $query->execute();
     if ($query->rowCount() == 0) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'error' => 'No existe una propiedad con el ID provisto',
-            ])
-        );
-        return $response->withStatus(400);
+        throw new Exception('No existe una propiedad con el ID provisto', 404);
     }
     $propiedad = $query->fetch(PDO::FETCH_ASSOC);
     $response->getBody()->write(
@@ -118,20 +112,15 @@ $app->post('/propiedades', function (Request $request, Response $response) {
 
     $localidadId = $data['localidad_id'];
     if (!existeEnTabla($pdo, 'localidades', $localidadId)) {
-        $errores['localidad_id'] = 'No existe una localidad con el ID provisto';
+        throw new Exception('No existe una localidad con el ID provisto', 404);
     }
 
     $tipoPropiedadId = $data['tipo_propiedad_id'];
     if (!existeEnTabla($pdo, 'tipo_propiedades', $tipoPropiedadId)) {
-        $errores['tipo_propiedad_id'] =
-            'No existe una tipo de propiedad con el ID provisto';
-    }
-
-    if (!empty($errores)) {
-        $response
-            ->getBody()
-            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
-        return $response->withStatus(400);
+        throw new Exception(
+            'No existe una tipo de propiedad con el ID provisto',
+            404
+        );
     }
 
     $stringInserciones = construirStringInserciones($data);
@@ -170,13 +159,7 @@ $app->put('/propiedades/{id:[0-9]+}', function (
         ])
     );
     if (empty($data)) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'error' => 'No se insertó ningún valor',
-            ])
-        );
-        return $response->withStatus(400);
+        throw new Exception('No se insertó ningún valor', 400);
     }
 
     $errores = obtenerErrores($data, validaciones_propiedad, true);
@@ -192,22 +175,20 @@ $app->put('/propiedades/{id:[0-9]+}', function (
     if (isset($data['localidad_id'])) {
         $localidadId = $data['localidad_id'];
         if (!existeEnTabla($pdo, 'localidades', $localidadId)) {
-            $errores['localidad_id'] =
-                'No existe una localidad con el ID provisto';
+            throw new Exception(
+                'No existe una localidad con el ID provisto',
+                404
+            );
         }
     }
     if (isset($data['tipo_propiedad_id'])) {
         $tipoPropiedadId = $data['tipo_propiedad_id'];
         if (!existeEnTabla($pdo, 'tipo_propiedades', $tipoPropiedadId)) {
-            $errores['propiedad_id'] =
-                'No existe un tipo de propiedad con el ID provisto';
+            throw new Exception(
+                'No existe un tipo de propiedad con el ID provisto',
+                404
+            );
         }
-    }
-    if (!empty($errores)) {
-        $response
-            ->getBody()
-            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
-        return $response->withStatus(400);
     }
 
     $id = $args['id'];
@@ -265,20 +246,14 @@ $app->delete('/propiedades/{id:[0-9]+}', function (
     $query->bindValue(':id', $id);
     $query->execute();
     if ($query->rowCount() > 0) {
-        $errores['propiedad'] =
-            'No se puede eliminar la propiedad porque una reserva la está usando';
-        //no es el mejor nombre
+        throw new Exception(
+            'No se puede eliminar la propiedad porque una reserva la está usando',
+            409
+        );
     }
 
     if (!existeEnTabla($pdo, 'propiedades', $id)) {
-        $errores['id'] = 'No existe una propiedad con el ID provisto';
-    }
-
-    if (!empty($errores)) {
-        $response
-            ->getBody()
-            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
-        return $response->withStatus(400);
+        throw new Exception('No existe una propiedad con el ID provisto', 404);
     }
 
     $sql = 'DELETE FROM propiedades WHERE id = :id';

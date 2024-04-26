@@ -49,24 +49,19 @@ $app->post('/reservas', function (Request $request, Response $response) {
     $query->bindValue(':id', $inquilinoId);
     $query->execute();
     if ($query->rowCount() == 0) {
-        $errores['inquilino_id'] = 'No existe un inquilino con el ID provisto';
+        throw new Exception('No existe un inquilino con el ID provisto', 404);
     } else {
         $inquilino = $query->fetch(PDO::FETCH_ASSOC);
         if (!$inquilino['activo']) {
-            $errores['inquilino'] =
-                'No se puede crear la reserva porque el inquilino no está activo';
+            throw new Exception(
+                'No se puede crear la reserva porque el inquilino no está activo',
+                400
+            );
         }
     }
 
     if (!existeEnTabla($pdo, 'propiedades', $propiedadId)) {
-        $errores['propiedad_id'] = 'No existe una propiedad con el ID provisto';
-    }
-
-    if (!empty($errores)) {
-        $response
-            ->getBody()
-            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
-        return $response->withStatus(400);
+        throw new Exception('No existe una propiedad con el ID provisto', 404);
     }
 
     $propiedad = $query->fetch(PDO::FETCH_ASSOC);
@@ -108,13 +103,7 @@ $app->put('/reservas/{id:[0-9]+}', function (
     $id = $args['id'];
 
     if (empty($data)) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'message' => 'No se ingresó ningun valor',
-            ])
-        );
-        return $response->withStatus(400);
+        throw new Exception('No se ingresó ningun valor', 400);
     }
 
     $errores = obtenerErrores($data, validaciones_reserva, true);
@@ -132,7 +121,7 @@ $app->put('/reservas/{id:[0-9]+}', function (
     $query->bindValue(':id', $id);
     $query->execute();
     if ($query->rowCount() == 0) {
-        $errores['id'] = 'No existe una reserva con el ID provisto';
+        throw new Exception('No existe una reserva con el ID provisto', 404);
     } else {
         $reserva = $query->fetch(PDO::FETCH_ASSOC);
     }
@@ -143,13 +132,17 @@ $app->put('/reservas/{id:[0-9]+}', function (
         $query->bindValue(':id', $data['inquilino_id']);
         $query->execute();
         if ($query->rowCount() == 0) {
-            $errores['inquilino_id'] =
-                'No existe un inquilino con el ID provisto';
+            throw new Exception(
+                'No existe un inquilino con el ID provisto',
+                404
+            );
         } else {
             $inquilino = $query->fetch(PDO::FETCH_ASSOC);
             if (!$inquilino['activo']) {
-                $errores['inquilino'] =
-                    'No se puede crear la reserva porque el inquilino no está activo';
+                $errores['inquilino'] = throw new Exception(
+                    'No se puede crear la reserva porque el inquilino no está activo',
+                    400
+                );
             }
         }
     }
@@ -160,17 +153,13 @@ $app->put('/reservas/{id:[0-9]+}', function (
         $query->bindValue(':id', $data['propiedad_id']);
         $query->execute();
         if ($query->rowCount() == 0) {
-            $errores['propiedad_id'] =
-                'No existe una propiedad con el ID provisto';
+            throw new Exception(
+                'No existe una propiedad con el ID provisto',
+                404
+            );
         } else {
             $propiedad = $query->fetch(PDO::FETCH_ASSOC);
         }
-    }
-    if (!empty($errores)) {
-        $response
-            ->getBody()
-            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
-        return $response->withStatus(400);
     }
 
     //actualiza el valor total con los valores valor_noche y cantidad_noches
@@ -212,14 +201,19 @@ $app->delete('/reservas/{id:[0-9]+}', function (
     $id = $args['id'];
     $pdo = createConnection();
 
-    if (!existeEnTabla($pdo, 'reservas', $id)) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'error' => 'No existe una reserva con el ID provisto',
-            ])
+    $sql = 'SELECT * FROM reservas WHERE id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':id', $id);
+    $query->execute();
+    if ($query->rowCount() == 0) {
+        throw new Exception('No existe una reserva con el ID provisto', 404);
+    }
+    $reserva = $query->fetch(PDO::FETCH_ASSOC);
+    if ($reserva['fecha_desde'] >= date('Y-m-d')) {
+        throw new Exception(
+            'No se puede eliminar la reserva porque ya comenzó',
+            400
         );
-        return $response->withStatus(400);
     }
 
     $sql = 'DELETE FROM reservas WHERE id = :id';

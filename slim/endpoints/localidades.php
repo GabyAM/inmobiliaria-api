@@ -37,13 +37,7 @@ $app->post('/localidades', function (Request $request, Response $response) {
     $query->bindValue(':nombre', $nombre);
     $query->execute();
     if ($query->rowCount() > 0) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'error' => 'Ya existe una localidad con ese nombre',
-            ])
-        );
-        return $response->withStatus(409);
+        throw new Exception('Ya existe una localidad con ese nombre', 409);
     }
 
     $sql = 'INSERT INTO localidades (nombre) VALUES (:nombre)';
@@ -85,7 +79,7 @@ $app->put('/localidades/{id:[0-9]+}', function (
     $pdo = createConnection();
 
     if (!existeEnTabla($pdo, 'localidades', $id)) {
-        $errores['id'] = 'No existe una localidad con el ID provisto';
+        throw new Exception('No existe una localidad con el ID provisto', 404);
     }
 
     $sql = 'SELECT * FROM localidades WHERE nombre = :nombre AND id != :id';
@@ -94,14 +88,7 @@ $app->put('/localidades/{id:[0-9]+}', function (
     $query->bindParam(':nombre', $nombre);
     $query->execute();
     if ($query->rowCount() > 0) {
-        $errores['nombre'] = 'Ya existe una localidad con ese nombre';
-    }
-
-    if (!empty($errores)) {
-        $response
-            ->getBody()
-            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
-        return $response->withStatus(400);
+        throw new Exception('Ya existe una localidad con ese nombre', 409);
     }
 
     $sql = 'UPDATE localidades SET nombre = :nombre WHERE id = :id';
@@ -128,7 +115,7 @@ $app->delete('/localidades/{id:[0-9]+}', function (
     $pdo = createConnection();
 
     if (!existeEnTabla($pdo, 'localidades', $id)) {
-        $errores['id'] = 'No existe una localidad con el ID provisto';
+        throw new Exception('No existe una localidad con el ID provisto', 404);
     }
 
     $sql = 'SELECT * FROM propiedades WHERE localidad_id = :id';
@@ -136,15 +123,10 @@ $app->delete('/localidades/{id:[0-9]+}', function (
     $query->bindValue(':id', $id);
     $query->execute();
     if ($query->rowCount() > 0) {
-        $errores['nombre'] =
-            'No se puede eliminar la localidad porque una propiedad la está usando';
-    }
-
-    if (!empty($errores)) {
-        $response
-            ->getBody()
-            ->write(json_encode(['status' => 'failure', 'errors' => $errores]));
-        return $response->withStatus(400);
+        throw new Exception(
+            'No se puede eliminar la localidad porque una propiedad la está usando',
+            409
+        );
     }
 
     $sql = 'DELETE FROM localidades WHERE id = :id';

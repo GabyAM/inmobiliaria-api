@@ -35,14 +35,10 @@ $app->get('/inquilinos/{id:[0-9]+}', function (
     $query->execute();
 
     if ($query->rowCount() == 0) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'message' =>
-                    'no se encontro ningun inquilino con el ID provisto',
-            ])
+        throw new Exception(
+            'no se encontro ningun inquilino con el ID provisto',
+            404
         );
-        return $response->withStatus(400);
     }
     $response->getBody()->write(
         json_encode([
@@ -67,13 +63,10 @@ $app->get('/inquilinos/{id:[0-9]+}/reservas', function (
     $query->execute();
 
     if ($query->rowCount() == 0) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'message' => 'no existe ningun inquilino con el ID provisto',
-            ])
+        throw new Exception(
+            'no existe ningun inquilino con el ID provisto',
+            404
         );
-        return $response->withStatus(400);
     }
 
     $sql = 'SELECT * FROM reservas WHERE inquilino_id = :inquilino_id ';
@@ -127,13 +120,7 @@ $app->post('/inquilinos', function (Request $request, Response $response) {
     $query->execute();
 
     if ($query->rowCount() > 0) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'message' => 'no se puede repetir el Documento',
-            ])
-        );
-        return $response->withStatus(400);
+        throw new Exception('no se puede repetir el documento', 409);
     }
 
     $stringInserciones = construirStringInserciones($data);
@@ -163,13 +150,7 @@ $app->put('/inquilinos/{id:[0-9]+}', function (
     );
 
     if (empty($data)) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'error' => 'No se insertó ningún valor',
-            ])
-        );
-        return $response->withStatus(400);
+        throw new Exception('No se insertó ningún valor', 404);
     }
 
     //$id = $args['id'] ?? null;     $args['id'] nunca es null, ya que si no existiera el id, el url sería invalido
@@ -195,9 +176,8 @@ $app->put('/inquilinos/{id:[0-9]+}', function (
     $query = $pdo->prepare($sql);
     $query->bindValue(':id', $id);
     $query->execute();
-
     if ($query->rowCount() == 0) {
-        $errores['id'] = 'No existe un inquilino con la ID provista';
+        throw new Exception('No existe un inquilino con la ID provista', 404);
     }
 
     if (isset($data['documento'])) {
@@ -209,18 +189,8 @@ $app->put('/inquilinos/{id:[0-9]+}', function (
         $query->execute();
 
         if ($query->rowCount() > 0) {
-            $errores['documento'] = 'No se puede repetir el documento';
+            throw new Exception('No se puede repetir el documento', 409);
         }
-    }
-
-    if (!empty($errores)) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'errors' => $errores,
-            ])
-        );
-        return $response->withStatus(400);
     }
 
     $stringActualizaciones = construirStringActualizaciones($data);
@@ -248,10 +218,8 @@ $app->delete('/inquilinos/{id:[0-9]+}', function (
     $id = $args['id'];
     $pdo = createConnection();
 
-    $errores = [];
-
     if (!existeEnTabla($pdo, 'inquilinos', $id)) {
-        $errores['id'] = 'No existe un inquilino con el ID provisto';
+        throw new Exception('No existe un inquilino con el ID provisto', 404);
     }
 
     $sql = 'SELECT * FROM reservas WHERE inquilino_id = :id';
@@ -259,18 +227,10 @@ $app->delete('/inquilinos/{id:[0-9]+}', function (
     $query->bindValue(':id', $id);
     $query->execute();
     if ($query->rowCount() > 0) {
-        $errores['reserva'] =
-            'no se puede eliminar el inquilino porque una reserva lo está utilizando';
-    }
-
-    if (!empty($errores)) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'errors' => $errores,
-            ])
+        throw new Exception(
+            'no se puede eliminar el inquilino porque una reserva lo está utilizando',
+            409
         );
-        return $response->withStatus(400);
     }
 
     $sql = 'DELETE FROM inquilinos WHERE id = :id';

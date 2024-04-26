@@ -54,14 +54,7 @@ $app->post('/tipo_propiedades', function (
     $query->execute();
 
     if ($query->rowCount() > 0) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'message' => 'el campo nombre no se puede repetir',
-            ])
-        );
-
-        return $response->withStatus(400);
+        throw new Exception('el campo nombre no se puede repetir', 409);
     }
 
     $sql = "INSERT INTO tipo_propiedades (nombre)
@@ -106,7 +99,7 @@ $app->put('/tipo_propiedades/{id:[0-9]+}', function (
     $pdo = createConnection();
 
     if (!existeEnTabla($pdo, 'tipo_propiedades', $id)) {
-        $errores['id'] = 'no existe una propiedad con el ID provisto';
+        throw new Exception('no existe una propiedad con el ID provisto', 404);
     }
 
     $sql = 'SELECT * FROM localidades WHERE nombre = :nombre AND id != :id'; //busco si existe un mismo nombre con otra ID
@@ -115,17 +108,10 @@ $app->put('/tipo_propiedades/{id:[0-9]+}', function (
     $query->bindParam(':nombre', $nombre);
     $query->execute();
     if ($query->rowCount() > 0) {
-        $errores['nombre'] = 'ya existe otra propiedad con el mismo nombre';
-    }
-
-    if (!empty($errores)) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'errores' => $errores,
-            ])
+        throw new Exception(
+            'ya existe otra propiedad con el mismo nombre',
+            409
         );
-        return $response->withStatus(400);
     }
 
     $sql = "UPDATE tipo_propiedades
@@ -157,7 +143,7 @@ $app->delete('/tipo_propiedades/{id:[0-9]+}', function (
     $pdo = createConnection();
 
     if (!existeEnTabla($pdo, 'tipo_propiedades', $id)) {
-        $errores['id'] = 'no existe una propiedad con el ID provisto';
+        throw new Exception('no existe una propiedad con el ID provisto', 404);
     }
 
     $sql = 'SELECT * FROM propiedades WHERE tipo_propiedad_id = :id';
@@ -165,18 +151,10 @@ $app->delete('/tipo_propiedades/{id:[0-9]+}', function (
     $query->bindValue(':id', $id);
     $query->execute();
     if ($query->rowCount() > 0) {
-        $errores['propiedad'] =
-            'No se puede eliminar el tipo de propiedad porque una propiedad lo está usando';
-    }
-
-    if (!empty($errores)) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'errores' => $errores,
-            ])
+        throw new Exception(
+            'No se puede eliminar el tipo de propiedad porque una propiedad lo está usando',
+            409
         );
-        return $response->withStatus(400);
     }
 
     $sql = 'DELETE FROM tipo_propiedades WHERE id = :id';
