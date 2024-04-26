@@ -1,10 +1,8 @@
 <?php
 
-use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Respect\Validation\Exceptions\NestedValidationException;
 use Slim\Factory\AppFactory;
-use Respect\Validation\Validator as v;
 
 require __DIR__ . '/vendor/autoload.php';
 
