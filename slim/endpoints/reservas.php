@@ -55,7 +55,7 @@ $app->post('/reservas', function (Request $request, Response $response) {
         throw new Exception('No existe un inquilino con el ID provisto', 404);
     } else {
         $inquilino = $query->fetch(PDO::FETCH_ASSOC);
-        if (!$inquilino['activo']) {
+        if ($inquilino['activo'] == false) {
             throw new Exception(
                 'No se puede crear la reserva porque el inquilino no está activo',
                 400
@@ -63,7 +63,11 @@ $app->post('/reservas', function (Request $request, Response $response) {
         }
     }
 
-    if (!existeEnTabla($pdo, 'propiedades', $propiedadId)) {
+    $sql = 'SELECT * FROM propiedades WHERE id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':id', $propiedadId);
+    $query->execute();
+    if ($query->rowCount() == 0) {
         throw new Exception('No existe una propiedad con el ID provisto', 404);
     }
 

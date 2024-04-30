@@ -9,6 +9,6 @@ define('mensajes_error_localidad', [
     'nombre' => [
         'notOptional' => 'Este campo es requerido',
         'stringType' => 'Este campo debe ser un string',
-        'Length' => 'Este campo debe tener una longitud menor a 50',
+        'length' => 'Este campo debe tener una longitud menor a 50',
     ],
 ]);

@@ -94,7 +94,7 @@ $app->get('/inquilinos/{id:[0-9]+}/reservas', function (
 });
 
 $app->post('/inquilinos', function (Request $request, Response $response) {
-    $data = array_intersect(
+    $data = array_intersect_key(
         $request->getParsedBody() ?? [],
         array_flip(['documento', 'nombre', 'apellido', 'email', 'activo'])
     );
