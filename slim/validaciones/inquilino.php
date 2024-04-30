@@ -2,7 +2,7 @@
 use Respect\Validation\Validator as v;
 
 define('validaciones_inquilino', [
-    'nombre_usuario' => v::notOptional()->stringType()->length(null, 20),
+    'documento' => v::notOptional()->stringType()->length(null, 20),
     'apellido' => v::notOptional()->stringType()->length(null, 15),
     'nombre' => v::notOptional()->stringType()->length(null, 25),
     'email' => v::notOptional()->email()->length(null, 20),
@@ -10,7 +10,7 @@ define('validaciones_inquilino', [
 ]);
 
 define('mensajes_error_inquilino', [
-    'nombre_usuario' => [
+    'documento' => [
         'notOptional' => 'Este campo es requerido',
         'stringType' => 'Este campo debe ser un string',
         'length' => 'Este campo debe tener una longitud menor o igual a 20',

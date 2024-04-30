@@ -96,7 +96,7 @@ $app->get('/inquilinos/{id:[0-9]+}/reservas', function (
 $app->post('/inquilinos', function (Request $request, Response $response) {
     $data = array_intersect(
         $request->getParsedBody() ?? [],
-        array_flip(['nombre_usuario', 'nombre', 'apellido', 'email', 'activo'])
+        array_flip(['documento', 'nombre', 'apellido', 'email', 'activo'])
     );
 
     $errores = obtenerErrores(
@@ -115,18 +115,18 @@ $app->post('/inquilinos', function (Request $request, Response $response) {
         return $response->withStatus(400);
     }
 
-    $nombre_usuario = $data['nombre_usuario'];
+    $documento = $data['documento'];
 
     $pdo = createConnection();
     $sql = 'SELECT * FROM inquilinos 
-        WHERE nombre_usuario = :nombre_usuario ';
+        WHERE documento = :documento ';
 
     $query = $pdo->prepare($sql);
-    $query->bindValue(':nombre_usuario', $nombre_usuario);
+    $query->bindValue(':documento', $documento);
     $query->execute();
 
     if ($query->rowCount() > 0) {
-        throw new Exception('no se puede repetir el nombre de usuario', 409);
+        throw new Exception('no se puede repetir el documento', 409);
     }
 
     $stringInserciones = construirStringInserciones($data);
@@ -152,7 +152,7 @@ $app->put('/inquilinos/{id:[0-9]+}', function (
 ) {
     $data = array_intersect_key(
         $request->getParsedBody() ?? [],
-        array_flip(['nombre_usuario', 'apellido', 'nombre', 'email', 'activo'])
+        array_flip(['documento', 'apellido', 'nombre', 'email', 'activo'])
     );
 
     if (empty($data)) {
@@ -191,20 +191,16 @@ $app->put('/inquilinos/{id:[0-9]+}', function (
         throw new Exception('No existe un inquilino con la ID provista', 404);
     }
 
-    if (isset($data['nombre_usuario'])) {
-        $nombreUsuario = $data['nombre_usuario'];
-        $sql =
-            'SELECT * FROM inquilinos WHERE nombre_usuario = :nombre_usuario';
+    if (isset($data['documento'])) {
+        $documento = $data['documento'];
+        $sql = 'SELECT * FROM inquilinos WHERE documento = :documento';
 
         $query = $pdo->prepare($sql);
-        $query->bindValue(':nombre_usuario', $nombreUsuario);
+        $query->bindValue(':documento', $documento);
         $query->execute();
 
         if ($query->rowCount() > 0) {
-            throw new Exception(
-                'No se puede repetir el nombre de usuario',
-                409
-            );
+            throw new Exception('No se puede repetir el documento', 409);
         }
     }
 
