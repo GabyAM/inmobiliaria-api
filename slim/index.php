@@ -18,9 +18,14 @@ $customErrorHandler = function (Request $request, Throwable $exception) use (
     $response = $app->getResponseFactory()->createResponse();
     $response->getBody()->write(json_encode($payload, JSON_UNESCAPED_UNICODE));
 
-    return $response->withStatus(
-        $exception->getCode() > 500 ? 500 : $exception->getCode()
-    );
+    $exceptionCode = $exception->getCode();
+    if (gettype($exceptionCode) !== 'integer' || $exceptionCode > 500) {
+        $responseCode = 500;
+    } else {
+        $responseCode = $exception->getCode();
+    }
+
+    return $response->withStatus($responseCode);
 };
 
 $errorMiddleware = $app->addErrorMiddleware(true, true, true);
