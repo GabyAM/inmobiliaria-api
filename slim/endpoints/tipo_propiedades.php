@@ -15,7 +15,7 @@ $app->get('/tipo_propiedades', function (Request $request, Response $response) {
     $response->getBody()->write(
         json_encode([
             'status' => 'success',
-            'data' => $data,
+            'results' => $data,
         ])
     );
 
@@ -92,7 +92,7 @@ $app->put('/tipo_propiedades/{id:[0-9]+}', function (
         $response->getBody()->write(
             json_encode([
                 'status' => 'failure',
-                'errores' => $errores,
+                'errors' => $errores,
             ])
         );
         return $response->withStatus(400);
