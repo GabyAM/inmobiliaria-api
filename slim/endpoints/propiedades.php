@@ -77,7 +77,7 @@ $app->get('/propiedades/{id:[0-9]+}', function (
     $response->getBody()->write(
         json_encode([
             'status' => 'success',
-            'result' => $propiedad,
+            'data' => $propiedad,
         ])
     );
     return $response->withStatus(200);

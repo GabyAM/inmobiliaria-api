@@ -15,7 +15,7 @@ $app->get('/tipo_propiedades', function (Request $request, Response $response) {
     $response->getBody()->write(
         json_encode([
             'status' => 'success',
-            'results' => $data,
+            'data' => $data,
         ])
     );
 

@@ -11,7 +11,7 @@ $app->get('/localidades', function (Request $request, Response $response) {
     $sql = 'SELECT * FROM localidades';
     $query = $pdo->query($sql);
     $results = $query->fetchAll(PDO::FETCH_ASSOC);
-    $data = ['status' => 'success', 'results' => $results];
+    $data = ['status' => 'success', 'data' => $results];
 
     $response->getBody()->write(json_encode($data));
     return $response->withStatus(201);

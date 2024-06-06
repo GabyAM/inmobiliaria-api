@@ -14,7 +14,7 @@ $app->get('/inquilinos', function (Request $request, Response $response) {
     $data = $query->fetchAll(PDO::FETCH_ASSOC);
     $payload = json_encode([
         'status' => 'success',
-        'results' => $data,
+        'data' => $data,
     ]);
 
     $response->getBody()->write($payload);
@@ -42,7 +42,7 @@ $app->get('/inquilinos/{id:[0-9]+}', function (
     $response->getBody()->write(
         json_encode([
             'status' => 'success',
-            'result' => $query->fetchAll(PDO::FETCH_ASSOC),
+            'data' => $query->fetchAll(PDO::FETCH_ASSOC),
         ])
     );
     return $response->withStatus(200);
@@ -87,7 +87,7 @@ $app->get('/inquilinos/{id:[0-9]+}/reservas', function (
     $response->getBody()->write(
         json_encode([
             'status' => 'success',
-            'results' => $query->fetchAll(PDO::FETCH_ASSOC),
+            'data' => $query->fetchAll(PDO::FETCH_ASSOC),
         ])
     );
     return $response->withStatus(200);
