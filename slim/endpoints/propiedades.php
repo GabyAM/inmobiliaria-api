@@ -52,7 +52,28 @@ $app->get('/propiedades', function (Request $request, Response $response) {
     }
     $query = $pdo->query($sql);
     $results = $query->fetchAll(PDO::FETCH_ASSOC);
-    $data = ['status' => 'success', 'results' => $results];
+    foreach ($results as &$propiedad) {
+        //reemplazar los id de localidad y tipo_propiedad_id por los objetos
+        // "popular"
+
+        $sql = 'SELECT * FROM localidades WHERE id = :id';
+        $query = $pdo->prepare($sql);
+        $query->bindValue(':id', $propiedad['localidad_id']);
+        $query->execute();
+        $localidad = $query->fetch(PDO::FETCH_ASSOC);
+        unset($propiedad['localidad_id']);
+        $propiedad['localidad'] = $localidad;
+
+        $sql = 'SELECT * FROM tipo_propiedades WHERE id = :id';
+        $query = $pdo->prepare($sql);
+        $query->bindValue(':id', $propiedad['tipo_propiedad_id']);
+        $query->execute();
+        $tipoPropiedad = $query->fetch(PDO::FETCH_ASSOC);
+        unset($propiedad['tipo_propiedad_id']);
+        $propiedad['tipo_propiedad'] = $tipoPropiedad;
+    }
+
+    $data = ['status' => 'success', 'data' => $results];
 
     $response->getBody()->write(json_encode($data));
     return $response->withStatus(201);
