@@ -41,7 +41,7 @@ $app->get('/propiedades', function (Request $request, Response $response) {
             $stringCondiciones .= $key . ' = ' . $value;
         }
         if ($i < count($params) - 1) {
-            $stringCondiciones .= ', ';
+            $stringCondiciones .= ' AND ';
         }
         $i++;
     }
