@@ -30,6 +30,9 @@ $customErrorHandler = function (Request $request, Throwable $exception) use (
 
 $errorMiddleware = $app->addErrorMiddleware(true, true, true);
 $errorMiddleware->setDefaultErrorHandler($customErrorHandler);
+$app->options('/{routes:.+}', function ($request, $response, $args) {
+    return $response;
+});
 $app->add(function ($request, $handler) {
     $response = $handler->handle($request);
 
