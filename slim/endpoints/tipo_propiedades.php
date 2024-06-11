@@ -22,6 +22,31 @@ $app->get('/tipo_propiedades', function (Request $request, Response $response) {
     return $response->withStatus(200);
 });
 
+$app->get('/tipo_propiedades/{id:[0-9]+}', function (
+    Request $request,
+    Response $response,
+    array $args
+) {
+    $pdo = createConnection();
+    $id = $args['id'];
+
+    $sql = 'SELECT * FROM tipo_propiedades WHERE id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':id', $id);
+    $query->execute();
+    if ($query->rowCount() == 0) {
+        throw new Exception('No existe el tipo de propiedad con el ID provisto', 404);
+    }
+    $data = $query->fetch(PDO::FETCH_ASSOC);
+    $response->getBody()->write(
+        json_encode([
+            'status' => 'success',
+            'data' => $data,
+        ])
+    );
+    return $response->withStatus(200);
+});
+
 $app->post('/tipo_propiedades', function (
     Request $request,
     Response $response
