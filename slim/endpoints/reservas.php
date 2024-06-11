@@ -11,6 +11,25 @@ $app->get('/reservas', function (Request $request, Response $response) {
     $sql = 'SELECT * FROM reservas';
     $query = $pdo->query($sql);
     $results = $query->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($results as &$reserva) { //& pasado como como referencia
+        $sql = 'SELECT * fROM propiedades WHERE id = :id';
+        $query = $pdo->prepare($sql);
+        $query->bindValue(':id', $reserva['propiedad_id']);
+        $query->execute();
+        $propiedad = $query->fetch(PDO::FETCH_ASSOC);
+        unset($reserva['propiedad_id']);
+        $reserva['propiedad'] = $propiedad;
+
+        $sql = 'SELECT * FROM inquilinos WHERE id = :id';
+        $query = $pdo->prepare($sql);
+        $query->bindValue(':id',$reserva['inquilino_id']);
+        $query->execute();
+        $inquilino = $query->fetch(PDO::FETCH_ASSOC);
+        unset($reserva['inquilino_id']);
+        $reserva['inquilino'] = $inquilino;
+    }
+
     $data = ['status' => 'success', 'data' => $results];
 
     $response->getBody()->write(json_encode($data));
