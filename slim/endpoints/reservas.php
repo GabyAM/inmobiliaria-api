@@ -36,6 +36,31 @@ $app->get('/reservas', function (Request $request, Response $response) {
     return $response->withStatus(200);
 });
 
+$app->get('/reservas/{id:[0-9]+}', function (
+    Request $request,
+    Response $response,
+    array $args
+) {
+    $pdo = createConnection();
+    $id = $args['id'];
+
+    $sql = 'SELECT * FROM reservas WHERE id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':id', $id);
+    $query->execute();
+    if ($query->rowCount() == 0) {
+        throw new Exception('No existe la reserva con el ID provisto', 404);
+    }
+    $data = $query->fetch(PDO::FETCH_ASSOC);
+    $response->getBody()->write(
+        json_encode([
+            'status' => 'success',
+            'data' => $data,
+        ])
+    );
+    return $response->withStatus(200);
+});
+
 $app->post('/reservas', function (Request $request, Response $response) {
     $data = array_intersect_key(
         $request->getParsedBody() ?? [],
