@@ -53,24 +53,19 @@ $app->get('/propiedades', function (Request $request, Response $response) {
     $query = $pdo->query($sql);
     $results = $query->fetchAll(PDO::FETCH_ASSOC);
     foreach ($results as &$propiedad) {
-        //reemplazar los id de localidad y tipo_propiedad_id por los objetos
-        // "popular"
-
-        $sql = 'SELECT * FROM localidades WHERE id = :id';
-        $query = $pdo->prepare($sql);
-        $query->bindValue(':id', $propiedad['localidad_id']);
-        $query->execute();
-        $localidad = $query->fetch(PDO::FETCH_ASSOC);
+        $propiedad['localidad'] = obtenerDeTabla(
+            $pdo,
+            'localidades',
+            $propiedad['localidad_id']
+        );
         unset($propiedad['localidad_id']);
-        $propiedad['localidad'] = $localidad;
 
-        $sql = 'SELECT * FROM tipo_propiedades WHERE id = :id';
-        $query = $pdo->prepare($sql);
-        $query->bindValue(':id', $propiedad['tipo_propiedad_id']);
-        $query->execute();
-        $tipoPropiedad = $query->fetch(PDO::FETCH_ASSOC);
+        $propiedad['tipo_propiedad'] = obtenerDeTabla(
+            $pdo,
+            'tipo_propiedades',
+            $propiedad['tipo_propiedad_id']
+        );
         unset($propiedad['tipo_propiedad_id']);
-        $propiedad['tipo_propiedad'] = $tipoPropiedad;
     }
 
     $data = ['status' => 'success', 'data' => $results];
@@ -95,6 +90,21 @@ $app->get('/propiedades/{id:[0-9]+}', function (
         throw new Exception('No existe una propiedad con el ID provisto', 404);
     }
     $propiedad = $query->fetch(PDO::FETCH_ASSOC);
+
+    $propiedad['localidad'] = obtenerDeTabla(
+        $pdo,
+        'localidades',
+        $propiedad['localidad_id']
+    );
+    unset($propiedad['localidad_id']);
+
+    $propiedad['tipo_propiedad'] = obtenerDeTabla(
+        $pdo,
+        'tipo_propiedades',
+        $propiedad['tipo_propiedad_id']
+    );
+    unset($propiedad['tipo_propiedad_id']);
+
     $response->getBody()->write(
         json_encode([
             'status' => 'success',

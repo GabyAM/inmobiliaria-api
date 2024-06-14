@@ -73,16 +73,17 @@ $app->get('/inquilinos/{id:[0-9]+}/reservas', function (
     $query->bindValue(':inquilino_id', $id);
     $query->execute();
 
-    /*if ($query->rowCount() == 0) {
-        $response->getBody()->write(
-            json_encode([
-                'status' => 'failure',
-                'message' => 'el inquilino no realizo ninguna reserva',
-            ])
+    $reservas = $query->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($reservas as &$reserva) {
+        $reserva['propiedad'] = obtenerDeTabla(
+            $pdo,
+            'propiedades',
+            $reserva['propiedad_id'],
+            ['id', 'domicilio', 'fecha_inicio_disponibilidad']
         );
-        return $response->withStatus(400);
-    }     No hace falta devolver un error cuando el inquilino no tiene reservas, basta con devolver
-          el arreglo de reservas vacío */
+        unset($reserva['propiedad_id']);
+    }
 
     $response->getBody()->write(
         json_encode([

@@ -108,6 +108,34 @@ function existeEnTabla($pdo, $nombreTabla, $id) {
     return $query->rowCount() > 0;
 }
 
+function obtenerDeTabla($pdo, $nombreTabla, $id, $campos = null) {
+    $stringCampos = '';
+    if ($campos) {
+        $i = 0;
+        foreach (array_values($campos) as $campo) {
+            $stringCampos .= $campo;
+            if ($i < count($campos) - 1) {
+                $stringCampos .= ', ';
+                $i++;
+            }
+        }
+    }
+    if ($stringCampos == '') {
+        $stringCampos = '*';
+    }
+    $sql =
+        'SELECT ' . $stringCampos . ' FROM ' . $nombreTabla . ' WHERE id = :id';
+    $query = $pdo->prepare($sql);
+    $query->bindValue(':id', $id, PDO::PARAM_INT);
+    $query->execute();
+    if ($query->rowCount() > 1) {
+        return $query->fetchAll(PDO::FETCH_ASSOC);
+    } elseif ($query->rowCount() == 1) {
+        return $query->fetch(PDO::FETCH_ASSOC);
+    }
+    return null;
+}
+
 require __DIR__ . '/endpoints/localidades.php';
 require __DIR__ . '/endpoints/propiedades.php';
 require __DIR__ . '/endpoints/reservas.php';
