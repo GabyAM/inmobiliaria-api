@@ -27,12 +27,15 @@ define('mensajes_error_propiedad', [
         'intType' => 'Este campo debe ser un entero',
     ],
     'cantidad_habitaciones' => [
+        'validator' => 'Este campo debe ser un entero',
         'intType' => 'Este campo debe ser un entero',
     ],
     'cantidad_banios' => [
+        'validator' => 'Este campo debe ser un entero',
         'intType' => 'Este campo debe ser un entero',
     ],
     'cochera' => [
+        'validator' => 'Este campo debe ser un entero',
         'boolType' => 'Este campo debe ser un booleano',
     ],
     'cantidad_huespedes' => [
@@ -60,7 +63,7 @@ define('mensajes_error_propiedad', [
         'intType' => 'Este campo debe ser un entero',
     ],
     'imagen' => [
-        'notOptional' => 'Este campo es requerido',
+        'validator' => 'Este campo debe ser un string',
         'stringType' => 'Este campo debe ser un string',
     ],
     'tipo_imagen' => [
