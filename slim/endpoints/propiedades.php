@@ -2,6 +2,7 @@
 
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use Respect\Validation\Validator as v;
 
 require_once __DIR__ . '/../utilidades/strings_sql.php';
 require_once __DIR__ . '/../validaciones/propiedad.php';
@@ -82,6 +83,11 @@ $app->get('/propiedades/{id:[0-9]+}', function (
     $pdo = createConnection();
     $id = $args['id'];
 
+    $paramPopulado = $request->getQueryParams()['populado'] ?? null;
+    if ($paramPopulado && !v::regex('/true|false/')->validate($paramPopulado)) {
+        throw new Exception('El parámetro populado debe ser un booleano', 400);
+    }
+
     $sql = 'SELECT * FROM propiedades WHERE id = :id';
     $query = $pdo->prepare($sql);
     $query->bindValue(':id', $id);
@@ -91,19 +97,22 @@ $app->get('/propiedades/{id:[0-9]+}', function (
     }
     $propiedad = $query->fetch(PDO::FETCH_ASSOC);
 
-    $propiedad['localidad'] = obtenerDeTabla(
-        $pdo,
-        'localidades',
-        $propiedad['localidad_id']
-    );
-    unset($propiedad['localidad_id']);
+    if ($paramPopulado == 'true') {
+        //popula solo si el parametro populado fue pasado y es true
+        $propiedad['localidad'] = obtenerDeTabla(
+            $pdo,
+            'localidades',
+            $propiedad['localidad_id']
+        );
+        unset($propiedad['localidad_id']);
 
-    $propiedad['tipo_propiedad'] = obtenerDeTabla(
-        $pdo,
-        'tipo_propiedades',
-        $propiedad['tipo_propiedad_id']
-    );
-    unset($propiedad['tipo_propiedad_id']);
+        $propiedad['tipo_propiedad'] = obtenerDeTabla(
+            $pdo,
+            'tipo_propiedades',
+            $propiedad['tipo_propiedad_id']
+        );
+        unset($propiedad['tipo_propiedad_id']);
+    }
 
     $response->getBody()->write(
         json_encode([
