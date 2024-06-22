@@ -39,10 +39,11 @@ $app->get('/inquilinos/{id:[0-9]+}', function (
             404
         );
     }
+
     $response->getBody()->write(
         json_encode([
             'status' => 'success',
-            'data' => $query->fetchAll(PDO::FETCH_ASSOC),
+            'data' => $query->fetch(PDO::FETCH_ASSOC),
         ])
     );
     return $response->withStatus(200);
@@ -80,7 +81,7 @@ $app->get('/inquilinos/{id:[0-9]+}/reservas', function (
             $pdo,
             'propiedades',
             $reserva['propiedad_id'],
-            ['id', 'domicilio', 'fecha_inicio_disponibilidad']
+            ['id', 'domicilio']
         );
         unset($reserva['propiedad_id']);
     }
@@ -88,7 +89,7 @@ $app->get('/inquilinos/{id:[0-9]+}/reservas', function (
     $response->getBody()->write(
         json_encode([
             'status' => 'success',
-            'data' => $query->fetchAll(PDO::FETCH_ASSOC),
+            'data' => $reservas,
         ])
     );
     return $response->withStatus(200);
@@ -194,10 +195,12 @@ $app->put('/inquilinos/{id:[0-9]+}', function (
 
     if (isset($data['documento'])) {
         $documento = $data['documento'];
-        $sql = 'SELECT * FROM inquilinos WHERE documento = :documento';
+        $sql =
+            'SELECT * FROM inquilinos WHERE documento = :documento AND id != :id';
 
         $query = $pdo->prepare($sql);
         $query->bindValue(':documento', $documento);
+        $query->bindValue(':id', $id);
         $query->execute();
 
         if ($query->rowCount() > 0) {
